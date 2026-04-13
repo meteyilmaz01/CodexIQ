@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="CodexIQ.Api/CodexIQ.Api.csproj" />
+  <Project Path="CodexIQ.Application/CodexIQ.Application.csproj" />
+  <Project Path="CodexIQ.Domain/CodexIQ.Domain.csproj" />
+  <Project Path="CodexIQ.Infrastructure/CodexIQ.Infrastructure.csproj" />
+</Solution>

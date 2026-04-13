@@ -1,0 +1,191 @@
+CodexIQ API <-> Python Worker <-> RabbitMQ Entegrasyonu
+AI Handoff Ozeti
+
+Tarih:
+2026-04-13
+
+Amac:
+.NET 10 Web API ile Python tabanli AI worker'in RabbitMQ uzerinden haberlesmesi.
+Akis su sekilde:
+1. Ogretmen API uzerinden sinavi baslatir.
+2. .NET, RabbitMQ uzerinden Python worker'a mesaj yollar.
+3. Python islemi tamamlar.
+4. Python sonucu RabbitMQ uzerinden .NET'e geri yollar.
+5. .NET consumer sonucu alip PostgreSQL veritabanini gunceller.
+
+Baslangictaki Sorun:
+Python sonucu gonderiyor gibi gorunuyordu ancak .NET tarafinda veritabani guncellenmiyordu.
+Semptom olarak loglarda SELECT goruluyor ama UPDATE/INSERT gorulmuyordu.
+
+Asama 1 - Ilk Tespit:
+TeacherRepository icindeki GetExamByIdAsync metodu hem ExamId hem TeacherId ile filtreleme yapiyordu.
+Arka plan consumer akisi TeacherId olmadan veya Guid.Empty ile geldigi icin sinav bulunamiyordu.
+Bu nedenle consumer icinde exam == null oluyor ve guncelleme adimina hic gecilemiyordu.
+
+Bu asamada yapilan degisiklikler:
+1. ITeacherRepository icindeki GetExamByIdAsync imzasi revize edildi.
+   Eski:
+   Task<Exam?> GetExamByIdAsync(Guid examId, Guid teacherId);
+
+   Yeni:
+   Task<Exam?> GetExamByIdAsync(Guid examId, Guid? teacherId = null);
+
+2. TeacherRepository.GetExamByIdAsync mantigi degistirildi.
+   Yeni davranis:
+   - Her zaman once ExamId ile sorgu atilir.
+   - teacherId gercekten verilmis ve Guid.Empty degilse ek olarak TeacherId filtresi uygulanir.
+   - Boylece ogretmen odakli istekler hala guvenli kalir.
+   - Arka plan consumer ise sadece ExamId ile sinavi bulabilir.
+
+3. Ayni sorguda ExamPaper -> FinalEvaluation iliskisi de yuklendi.
+   Neden:
+   Consumer mevcut FinalEvaluation var mi yok mu ayirt edebilsin diye.
+
+4. ExamResultConsumer, _unitOfWork.Teacher.GetExamByIdAsync(message.ExamId) seklinde cagrilacak sekilde guncellendi.
+   Artik Guid.Empty gonderilmiyor.
+
+Asama 2 - RabbitMQ Baglanti Sorunu:
+Bir ara MassTransit tarafinda su hata goruldu:
+Broker unreachable: guest@localhost:5672
+SocketException (10061): Hedef makine etkin olarak reddetti...
+
+Anlami:
+RabbitMQ ayakta degildi veya .NET baglanamiyordu.
+
+Bu asama sonrasi durum:
+RabbitMQ baglantisi duzeldi.
+Logda su satir goruldu:
+Bus started: rabbitmq://localhost/
+
+Bu satir ile .NET <-> RabbitMQ baglantisinin kuruldugu dogrulandi.
+
+Asama 3 - Mesajin Consumer'a Ulasmamasi:
+Bir sure consumer loglari gorulmedi.
+Ozellikle su satir gorulmuyordu:
+[ADIM 1] Kuyruktan mesaj geldi...
+
+Bu nedenle Python'in gonderdigi mesaj formati ile MassTransit'in bekledigi formatin uyusmamasi ihtimali incelendi.
+
+Bu noktada elde edilen kodlar:
+- Python, exam-results-queue uzerine JSON gonderiyordu.
+- .NET tarafinda ExamResultPublished su sekildeydi:
+  public record ExamResultPublished(Guid ExamId, Guid TeacherId, string ResultJson);
+
+Sonraki testlerde consumer tetiklendi ve [ADIM 1] logu goruldu.
+Bu da mesajin artik consumer'a basariyla ulastigini gostermis oldu.
+
+Asama 4 - Consumer Calisiyor Ama SaveChanges Patliyor:
+Consumer tetiklendi, sinav bulundu, ExamPaper bulundu.
+Ancak SaveChangesAsync sirasinda su hata alindi:
+
+"The database operation was expected to affect 1 row(s), but actually affected 0 row(s)"
+
+SQL logunda su desen goruldu:
+- UPDATE "ExamPapers"
+- UPDATE "FinalEvaluations"
+
+Sorun:
+FinalEvaluations tablosu bostu ama EF yeni kayit eklemek yerine UPDATE deniyordu.
+Bu da optimistic concurrency hatasina yol aciyordu.
+
+Neden:
+Consumer icinde sadece:
+paper.FinalEvaluation = new FinalEvaluation { ... }
+seklinde navigation assignment yapiliyordu.
+
+Bazi durumlarda EF bu yeni nesneyi Added yerine mevcut entity gibi ele alip UPDATE uretebiliyordu.
+
+Asama 5 - FinalEvaluation Insert Sorununun Cozulmesi:
+ExamResultConsumer yeniden duzenlendi.
+
+Yapilan degisiklik:
+1. Consumer icine CodexIQDbContext inject edildi.
+2. Yeni FinalEvaluation olusturuldugunda sadece navigation'a atanmakla kalinmadi.
+3. Ayni nesne acikca DbContext.FinalEvaluations.AddAsync(...) ile context'e eklendi.
+
+Yeni mantik:
+- paper.Status = Completed
+- Eger paper.FinalEvaluation yoksa:
+  - yeni FinalEvaluation olustur
+  - paper.FinalEvaluation = finalEvaluation
+  - await _dbContext.FinalEvaluations.AddAsync(finalEvaluation)
+- Varsa mevcut evaluation alanlarini guncelle
+- Sonra SaveChangesAsync cagir
+
+Bu duzeltmeden sonra loglarda su desen goruldu:
+- UPDATE "ExamPapers"
+- INSERT INTO "FinalEvaluations"
+- [BASARI] Sinav ... basariyla guncellendi ve kaydedildi.
+
+Bu, sistemin artik uçtan uca calistigini gosterir.
+
+Son Durum:
+Su an sistemin dogrulanan calisan akis:
+1. Postman istegi geliyor.
+2. .NET API gerekli islemi yapiyor.
+3. RabbitMQ uzerinden Python worker mesaj aliyor.
+4. Python sonucu exam-results-queue uzerinden geri yolluyor.
+5. MassTransit ExamResultConsumer mesaji aliyor.
+6. Consumer sinavi yalnizca ExamId ile bulabiliyor.
+7. ExamPaper.Status = Completed yapiliyor.
+8. FinalEvaluation kaydi yoksa INSERT atiliyor.
+9. SaveChangesAsync basariyla tamamlanıyor.
+
+Python Tarafi Notlari:
+Python worker kodunda exam-results-queue kuyruğuna su payload gonderiliyor:
+- examId
+- teacherId
+- resultJson
+
+Python callback:
+- evaluate-exam-queue'dan mesaji aliyor
+- process_exam_papers(...) cagiriyor
+- sonucu send_result_to_dotnet(...) ile geri gonderiyor
+
+.NET Tarafi Notlari:
+Program.cs icinde MassTransit / RabbitMQ konfigrasyonu var.
+ExamResultConsumer exam-results-queue endpoint'ine bagli.
+RabbitMQ host bilgisi:
+- host: localhost
+- username: guest
+- password: guest
+
+Verilen Loglardan Cikarilan Son Kesin Durum:
+- Bus started: rabbitmq://localhost/ => RabbitMQ baglantisi tamam
+- [ADIM 1] => Consumer tetiklendi
+- [ADIM 2] => Exam bulundu
+- [ADIM 3] => ExamPaper listesi bulundu
+- UPDATE ExamPapers => kağıt status guncelleniyor
+- INSERT INTO FinalEvaluations => sonuc ilk kez basariyla kaydediliyor
+- [BASARI] => veritabanina yazma tamam
+
+Halen Dikkat Edilebilecek Noktalar:
+1. QuerySplittingBehavior warning'i var.
+   Bu kritik bir hata degil, performans uyarisi.
+
+2. Consumer su an resultJson icindeki gercek sonucu parse etmiyor.
+   Simdilik FinalScore = 85 gibi sabit test verisi yaziyor.
+   Gelecekte:
+   - resultJson deserialize edilmeli
+   - score, ai_note, syntax/logic error alanlari oradan doldurulmali
+
+3. Duplicate message / idempotency dusunulebilir.
+   Ayni mesaj iki kez gelirse ikinci kez insert yerine mevcut FinalEvaluation update edilmeli.
+
+4. Loglar daha yapisal hale getirilebilir.
+   Console.WriteLine yerine ILogger kullanmak daha saglikli olur.
+
+Ozetle Yapilan Ana Kod Degisiklikleri:
+1. Repository imzasi optional teacherId destekleyecek sekilde degistirildi.
+2. Repository sorgusu teacherId olmadan da ExamId ile sinav bulacak sekilde revize edildi.
+3. Repository sorgusuna FinalEvaluation include edildi.
+4. Consumer exam'i sadece ExamId ile getirir hale getirildi.
+5. Consumer icinde yeni FinalEvaluation nesnesi DbContext'e acikca AddAsync ile eklendi.
+6. Boylece UPDATE yerine INSERT uretilmesi saglandi.
+
+Degisen Dosyalar:
+- CodexIQ.Application/Interfaces/Repositories/ITeacherRepository.cs
+- CodexIQ.Infrastructure/Repository/TeacherRepository.cs
+- CodexIQ.Infrastructure/Messaging/ExamResultConsumer.cs
+
+Bu dosya, bugunun sonunda sistemin hangi noktadan hangi noktaya geldigini ve neden bu degisikliklerin yapildigini baska bir AI'in hizli anlamasi icin olusturuldu.
