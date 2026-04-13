@@ -25,15 +25,16 @@ namespace CodexIQ.Infrastructure.Repository
 
         public async Task<AdminDashboardDto> GetDashboardAsync()
         {
-            var today = DateTime.UtcNow.Date;
-            var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            var now = DateTime.UtcNow;
+            var todayUtc = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
+            var monthStartUtc = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
             var totalUsers = await _context.Users.CountAsync();
             var totalTeachers = await _context.Users.CountAsync(x => x.Role == UserRole.Teacher);
             var totalStudents = await _context.Users.CountAsync(x => x.Role == UserRole.Student);
             var activeCourses = await _context.Courses.CountAsync(x => x.IsActive);
             var activeClasses = await _context.Classrooms.CountAsync(x => x.IsActive);
-            var examsThisMonth = await _context.Exams.CountAsync(x => x.CreatedDate >= monthStart);
+            var examsThisMonth = await _context.Exams.CountAsync(x => x.CreatedDate >= monthStartUtc);
             var announcementCount = await _context.Announcements.CountAsync(x => x.IsActive);
 
             var apiCosts = await GetApiCostsAsync();
@@ -52,14 +53,16 @@ namespace CodexIQ.Infrastructure.Repository
                 ApiUsage = apiCosts.Items,
                 RecentActivities = activities,
                 SystemStatuses = new List<AdminSystemStatusDto>
-                {
-                    new() { ServiceName = "API Gateway", Status = "Running", UptimePercent = 99.9, Note = "Kod çalışıyor" },
-                    new() { ServiceName = "RabbitMQ", Status = "Running", UptimePercent = 99.7, Note = "Queue akışı aktif" },
-                    new() { ServiceName = "PostgreSQL", Status = "Running", UptimePercent = 100, Note = "Bağlantı başarılı" },
-                    new() { ServiceName = "Gemini API", Status = "Warning", UptimePercent = 95.2, Note = "Gerçek health-check yok, tahmini veri" }
-                }
+        {
+            new() { ServiceName = "API Gateway", Status = "Running", UptimePercent = 99.9, Note = "Kod çalışıyor" },
+            new() { ServiceName = "RabbitMQ", Status = "Running", UptimePercent = 99.7, Note = "Queue akışı aktif" },
+            new() { ServiceName = "PostgreSQL", Status = "Running", UptimePercent = 100, Note = "Bağlantı başarılı" },
+            new() { ServiceName = "Gemini API", Status = "Warning", UptimePercent = 95.2, Note = "Gerçek health-check yok, tahmini veri" }
+        }
             };
         }
+
+
 
         public async Task<(List<AdminUserListItemDto> Items, int TotalCount)> GetUsersAsync(
             string? search, UserRole? role, bool? isActive, int page, int pageSize)
@@ -250,10 +253,11 @@ namespace CodexIQ.Infrastructure.Repository
 
         public async Task<AdminApiCostsDto> GetApiCostsAsync()
         {
-            var today = DateTime.UtcNow.Date;
+            var now = DateTime.UtcNow;
+            var todayUtc = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
 
             var raw = await _context.AIModelResults
-                .Where(x => x.CreatedDate >= today)
+                .Where(x => x.CreatedDate >= todayUtc)
                 .GroupBy(x => x.ModelName)
                 .Select(g => new
                 {
@@ -279,6 +283,7 @@ namespace CodexIQ.Infrastructure.Repository
                 Items = items
             };
         }
+
 
         public async Task<AdminQueueDto> GetQueueAsync()
         {
