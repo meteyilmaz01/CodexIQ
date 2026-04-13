@@ -14,6 +14,8 @@ namespace CodexIQ.Application.Interfaces.CoreDataInterfaces
 
         ITeacherRepository Teacher { get; }
 
+        IAdminRepository Admin { get; }
+
         Task<int> SaveChangesAsync();
     }
 }

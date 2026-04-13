@@ -17,13 +17,21 @@ namespace CodexIQ.Infrastructure.Persistence
 
         public ITeacherRepository Teacher { get; private set; }
 
-        public UnitOfWork(CodexIQDbContext context, IUserRepository userRepository, IStudentRepository studentRepository, IMessageRepository messageRepository, ITeacherRepository teacherRepository)
+        public IAdminRepository Admin { get; }
+
+        public UnitOfWork(CodexIQDbContext context, 
+            IUserRepository userRepository, 
+            IStudentRepository studentRepository, 
+            IMessageRepository messageRepository, 
+            ITeacherRepository teacherRepository,
+            IAdminRepository adminRepository)
         {
             _context = context;
             User = userRepository;
             Student = studentRepository;
             Message = messageRepository;
             Teacher = teacherRepository;
+            Admin = adminRepository;
         }
 
         public void Dispose()
