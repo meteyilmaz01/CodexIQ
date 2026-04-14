@@ -36,7 +36,7 @@ var columnWriters = new Dictionary<string, ColumnWriterBase>
     { "UserRole", new SinglePropertyColumnWriter("UserRole", PropertyWriteMethod.Raw, NpgsqlDbType.Varchar) }
 };
 
-// İlk Logger (SignalR henüz hazır değil, sadece Console + DB)
+
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
