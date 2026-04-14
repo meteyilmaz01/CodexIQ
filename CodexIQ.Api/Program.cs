@@ -109,6 +109,43 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!))
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = 401;
+                context.Response.ContentType = "application/json";
+
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("Yetkisiz erişim denemesi: {Path}", context.Request.Path);
+
+                var json = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    statusCode = 401,
+                    message = "Yetkilendirme başarısız. Geçerli bir token ile giriş yapınız."
+                });
+                await context.Response.WriteAsync(json);
+            },
+            OnForbidden = async context =>
+            {
+                context.Response.StatusCode = 403;
+                context.Response.ContentType = "application/json";
+
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("Yetkisiz rol erişimi: {Path}", context.Request.Path);
+
+                var json = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    statusCode = 403,
+                    message = "Bu işlem için yetkiniz bulunmamaktadır."
+                });
+                await context.Response.WriteAsync(json);
+            }
+        };
     });
 
 builder.Services.AddCors(options =>
