@@ -11,10 +11,12 @@ namespace CodexIQ.Api.Controllers
     public class AuthController : ControllerBase
     {
         readonly IAuthService _authService;
+        readonly ILogger<AuthController> _logger;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger)
         {
             _authService = authService;
+            _logger = logger;
         }
 
         [HttpPost("login")]
@@ -26,6 +28,7 @@ namespace CodexIQ.Api.Controllers
 
             if (!validationResult.IsValid)
             {
+                _logger.LogWarning("Login doğrulama başarısız: {Email}", request.Email);
                 return BadRequest(new
                 {
                     success = false,
@@ -35,10 +38,12 @@ namespace CodexIQ.Api.Controllers
             try
             {
                 var response = await _authService.LoginAsync(request);
+                _logger.LogInformation("Login başarılı: {Email}", request.Email);
                 return Ok(new { success = true, data = response });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Login başarısız: {Email}", request.Email);
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -51,10 +56,12 @@ namespace CodexIQ.Api.Controllers
             {
                 var userId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
                 await _authService.ChangePasswordAsync(userId, request);
+                _logger.LogInformation("Şifre değiştirildi");
                 return Ok(new { success = true, message = "Şifre değiştirildi" });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Şifre değiştirme başarısız");
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }

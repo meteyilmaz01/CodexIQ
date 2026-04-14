@@ -1,4 +1,4 @@
-﻿using CodexIQ.Application.Interfaces.Services;
+using CodexIQ.Application.Interfaces.Services;
 using CodexIQ.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +10,12 @@ using System.Security.Claims;
 public class AdminController : ControllerBase
 {
     private readonly IAdminService _adminService;
+    private readonly ILogger<AdminController> _logger;
 
-    public AdminController(IAdminService adminService)
+    public AdminController(IAdminService adminService, ILogger<AdminController> logger)
     {
         _adminService = adminService;
+        _logger = logger;
     }
 
     private Guid GetUserId()
@@ -21,7 +23,10 @@ public class AdminController : ControllerBase
 
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard()
-        => Ok(await _adminService.GetDashboardAsync());
+    {
+        _logger.LogInformation("Admin dashboard görüntülendi");
+        return Ok(await _adminService.GetDashboardAsync());
+    }
 
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers(
@@ -30,23 +35,31 @@ public class AdminController : ControllerBase
         [FromQuery] bool? isActive,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10)
-        => Ok(await _adminService.GetUsersAsync(search, role, isActive, page, pageSize));
+    {
+        _logger.LogInformation("Kullanıcı listesi görüntülendi (Sayfa: {Page}, Rol: {Role})", page, role?.ToString() ?? "Tümü");
+        return Ok(await _adminService.GetUsersAsync(search, role, isActive, page, pageSize));
+    }
 
     [HttpPatch("users/{id:guid}/status")]
     public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusRequestDto request)
     {
         await _adminService.UpdateUserStatusAsync(id, request.IsActive);
+        _logger.LogInformation("Kullanıcı durumu güncellendi: {Status} (UserId: {Id})", request.IsActive ? "Aktif" : "Pasif", id);
         return Ok(new { success = true, message = "Kullanıcı durumu güncellendi" });
     }
 
     [HttpGet("announcements")]
     public async Task<IActionResult> GetAnnouncements()
-        => Ok(await _adminService.GetAnnouncementsAsync());
+    {
+        _logger.LogInformation("Duyurular listelendi");
+        return Ok(await _adminService.GetAnnouncementsAsync());
+    }
 
     [HttpPost("announcements")]
     public async Task<IActionResult> CreateAnnouncement([FromBody] CreateAnnouncementRequestDto request)
     {
         await _adminService.CreateAnnouncementAsync(GetUserId(), request);
+        _logger.LogInformation("Duyuru oluşturuldu: {Title}", request.Title);
         return Ok(new { success = true, message = "Duyuru oluşturuldu" });
     }
 
@@ -54,6 +67,7 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateAnnouncement(Guid id, [FromBody] UpdateAnnouncementRequestDto request)
     {
         await _adminService.UpdateAnnouncementAsync(id, request);
+        _logger.LogInformation("Duyuru güncellendi (AnnouncementId: {Id})", id);
         return Ok(new { success = true, message = "Duyuru güncellendi" });
     }
 
@@ -61,17 +75,22 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteAnnouncement(Guid id)
     {
         await _adminService.DeleteAnnouncementAsync(id);
+        _logger.LogWarning("Duyuru silindi (AnnouncementId: {Id})", id);
         return Ok(new { success = true, message = "Duyuru silindi" });
     }
 
     [HttpGet("classes")]
     public async Task<IActionResult> GetClasses()
-        => Ok(await _adminService.GetClassesAsync());
+    {
+        _logger.LogInformation("Sınıf listesi görüntülendi");
+        return Ok(await _adminService.GetClassesAsync());
+    }
 
     [HttpPost("classes")]
     public async Task<IActionResult> CreateClass([FromBody] CreateClassRequestDto request)
     {
         await _adminService.CreateClassAsync(request);
+        _logger.LogInformation("Sınıf oluşturuldu: {ClassName}", request.Name);
         return Ok(new { success = true, message = "Sınıf oluşturuldu" });
     }
 
@@ -79,18 +98,28 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> CreateCourse([FromBody] CreateCourseRequestDto request)
     {
         await _adminService.CreateCourseAsync(request);
+        _logger.LogInformation("Ders oluşturuldu: {CourseName}", request.Name);
         return Ok(new { success = true, message = "Ders oluşturuldu" });
     }
 
     [HttpGet("logs")]
     public async Task<IActionResult> GetLogs([FromQuery] int take = 20)
-        => Ok(await _adminService.GetLogsAsync(take));
+    {
+        _logger.LogInformation("Log kayıtları görüntülendi (Take: {Take})", take);
+        return Ok(await _adminService.GetLogsAsync(take));
+    }
 
     [HttpGet("api-costs")]
     public async Task<IActionResult> GetApiCosts()
-        => Ok(await _adminService.GetApiCostsAsync());
+    {
+        _logger.LogInformation("API maliyetleri görüntülendi");
+        return Ok(await _adminService.GetApiCostsAsync());
+    }
 
     [HttpGet("queue")]
     public async Task<IActionResult> GetQueue()
-        => Ok(await _adminService.GetQueueAsync());
+    {
+        _logger.LogInformation("Kuyruk durumu görüntülendi");
+        return Ok(await _adminService.GetQueueAsync());
+    }
 }

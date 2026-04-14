@@ -13,9 +13,43 @@ using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Context;
+using Serilog.Events;
 using System.Text;
+using NpgsqlTypes;
+using Serilog.Sinks.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString("PostgreSqlConnection")!;
+
+var columnWriters = new Dictionary<string, ColumnWriterBase>
+{
+    { "Message", new RenderedMessageColumnWriter() },
+    { "Level", new LevelColumnWriter(true, NpgsqlDbType.Varchar) },
+    { "TimeStamp", new TimestampColumnWriter() },
+    { "Exception", new ExceptionColumnWriter() },
+    { "Properties", new PropertiesColumnWriter() },
+    { "UserName", new SinglePropertyColumnWriter("UserName", PropertyWriteMethod.Raw, NpgsqlDbType.Varchar) },
+    { "UserRole", new SinglePropertyColumnWriter("UserRole", PropertyWriteMethod.Raw, NpgsqlDbType.Varchar) }
+};
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] [{UserName} ({UserRole})] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.PostgreSQL(
+        connectionString: connectionString,
+        tableName: "Logs",
+        columnOptions: columnWriters,
+        needAutoCreateTable: false,
+        respectCase: true)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 builder.Services.AddDbContext<CodexIQDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgreSqlConnection")));
@@ -108,6 +142,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
+
+app.UseMiddleware<CodexIQ.Api.Middlewares.UserLogContextMiddleware>();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");

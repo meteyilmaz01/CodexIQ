@@ -22,6 +22,7 @@ namespace CodexIQ.Infrastructure.Persistence
         public DbSet<Announcement> Announcements { get; set; }
 
         public DbSet<RubricCriteria> RubricCriterias { get; set; }
+        public DbSet<Log> Logs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -41,9 +42,22 @@ namespace CodexIQ.Infrastructure.Persistence
 
             modelBuilder.Entity<Announcement>()
                 .HasOne(a => a.Creator)
-                .WithMany() 
+                .WithMany()
                 .HasForeignKey(a => a.CreatedBy)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Log>(entity =>
+            {
+                entity.ToTable("Logs");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.Message).HasColumnType("text");
+                entity.Property(e => e.Level).HasMaxLength(50);
+                entity.Property(e => e.Exception).HasColumnType("text");
+                entity.Property(e => e.Properties).HasColumnType("text");
+                entity.Property(e => e.UserName).HasMaxLength(200);
+                entity.Property(e => e.UserRole).HasMaxLength(50);
+            });
         }
     }
 }
