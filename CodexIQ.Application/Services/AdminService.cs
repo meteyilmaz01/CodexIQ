@@ -1,13 +1,17 @@
-﻿using CodexIQ.Application.Exceptions;
+﻿using CodexIQ.Application.DTOs.AdminDTOs;
+using CodexIQ.Application.Exceptions;
 using CodexIQ.Application.Interfaces.CoreDataInterfaces;
+using CodexIQ.Application.Interfaces.ExternalServices;
 
 public class AdminService : IAdminService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public AdminService(IUnitOfWork unitOfWork)
+    public AdminService(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher)
     {
         _unitOfWork = unitOfWork;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<AdminDashboardDto> GetDashboardAsync()
@@ -71,6 +75,58 @@ public class AdminService : IAdminService
         if (entity == null) throw new NotFoundException("Duyuru bulunamadı");
 
         _unitOfWork.Admin.DeleteAnnouncement(entity);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task CreateUserAsync(CreateUserRequestDto request)
+    {
+        var existingUser = await _unitOfWork.User.GetByEmailAsync(request.Email);
+        if (existingUser != null)
+            throw new BusinessException("Bu e-posta adresi zaten kullanılıyor.");
+
+        var user = new CodexIQ.Domain.Entities.User
+        {
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            Role = request.Role,
+            PasswordHash = _passwordHasher.HashPassword(request.Password),
+            IsActive = true 
+        };
+
+        await _unitOfWork.User.AddAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task UpdateUserAsync(Guid userId, UpdateUserRequestDto request)
+    {
+        var user = await _unitOfWork.Admin.GetUserEntityByIdAsync(userId);
+        if (user == null)
+            throw new NotFoundException("Kullanıcı bulunamadı");
+
+        if (user.Email != request.Email)
+        {
+            var existingUser = await _unitOfWork.User.GetByEmailAsync(request.Email);
+            if (existingUser != null)
+                throw new BusinessException("Bu e-posta adresi zaten kullanılıyor.");
+        }
+
+        user.FirstName = request.FirstName;
+        user.LastName = request.LastName;
+        user.Email = request.Email;
+        user.Role = request.Role;
+
+        _unitOfWork.User.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task DeleteUserAsync(Guid userId)
+    {
+        var user = await _unitOfWork.Admin.GetUserEntityByIdAsync(userId);
+        if (user == null)
+            throw new NotFoundException("Kullanıcı bulunamadı");
+
+        _unitOfWork.User.Delete(user);
         await _unitOfWork.SaveChangesAsync();
     }
 

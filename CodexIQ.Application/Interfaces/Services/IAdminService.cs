@@ -1,4 +1,5 @@
-﻿using CodexIQ.Domain.Enums;
+﻿using CodexIQ.Application.DTOs.AdminDTOs;
+using CodexIQ.Domain.Enums;
 
 public interface IAdminService
 {
@@ -11,6 +12,10 @@ public interface IAdminService
     Task CreateAnnouncementAsync(Guid adminId, CreateAnnouncementRequestDto request);
     Task UpdateAnnouncementAsync(Guid id, UpdateAnnouncementRequestDto request);
     Task DeleteAnnouncementAsync(Guid id);
+
+    Task CreateUserAsync(CreateUserRequestDto request);
+    Task UpdateUserAsync(Guid userId, UpdateUserRequestDto request);
+    Task DeleteUserAsync(Guid userId);
 
     Task<List<AdminClassListItemDto>> GetClassesAsync();
     Task CreateClassAsync(CreateClassRequestDto request);

@@ -1,3 +1,4 @@
+using CodexIQ.Application.DTOs.AdminDTOs;
 using CodexIQ.Application.Interfaces.Services;
 using CodexIQ.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -77,6 +78,30 @@ public class AdminController : ControllerBase
         await _adminService.DeleteAnnouncementAsync(id);
         _logger.LogWarning("Duyuru silindi (AnnouncementId: {Id})", id);
         return Ok(new { success = true, message = "Duyuru silindi" });
+    }
+
+    [HttpPost("users")]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserRequestDto request)
+    {
+        await _adminService.CreateUserAsync(request);
+        _logger.LogInformation("Admin tarafından yeni kullanıcı oluşturuldu: {Email}", request.Email);
+        return Ok(new { success = true, message = "Kullanıcı başarıyla oluşturuldu" });
+    }
+
+    [HttpPut("users/{id:guid}")]
+    public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequestDto request)
+    {
+        await _adminService.UpdateUserAsync(id, request);
+        _logger.LogInformation("Kullanıcı güncellendi (UserId: {Id})", id);
+        return Ok(new { success = true, message = "Kullanıcı başarıyla güncellendi" });
+    }
+
+    [HttpDelete("users/{id:guid}")]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        await _adminService.DeleteUserAsync(id);
+        _logger.LogWarning("Kullanıcı silindi (UserId: {Id})", id);
+        return Ok(new { success = true, message = "Kullanıcı başarıyla silindi" });
     }
 
     [HttpGet("classes")]
