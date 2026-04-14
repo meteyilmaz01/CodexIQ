@@ -1,7 +1,5 @@
 using CodexIQ.Application.DTOs.AuthDTOs;
-using CodexIQ.Application.Exceptions;
 using CodexIQ.Application.Interfaces.Services;
-using CodexIQ.Application.Validators.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,16 +21,6 @@ namespace CodexIQ.Api.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
-            var validator = new LoginRequestValidator();
-            var validationResult = await validator.ValidateAsync(request);
-
-            if (!validationResult.IsValid)
-            {
-                _logger.LogWarning("Login doğrulama başarısız: {Email}", request.Email);
-                throw new ValidationException(
-                    validationResult.Errors.Select(e => e.ErrorMessage).ToList());
-            }
-
             var response = await _authService.LoginAsync(request);
             _logger.LogInformation("Login başarılı: {Email}", request.Email);
             return Ok(new { success = true, data = response });

@@ -1,4 +1,4 @@
-﻿using CodexIQ.Application.DTOs.AuthDTOs;
+﻿    using CodexIQ.Application.DTOs.AuthDTOs;
 using FluentValidation;
 
 namespace CodexIQ.Application.Validators.Auth

@@ -14,9 +14,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using CodexIQ.Infrastructure.RealTime;
+using CodexIQ.Api.Middlewares;
+using CodexIQ.Application.Validators.Auth;
+using FluentValidation;
 using Serilog;
 using Serilog.Context;
 using Serilog.Events;
+using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
 using System.Text;
 using NpgsqlTypes;
 using Serilog.Sinks.PostgreSQL;
@@ -88,6 +92,12 @@ builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 
+builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
+builder.Services.AddFluentValidationAutoValidation(configuration =>
+{
+    configuration.DisableBuiltInModelValidation = true;
+    configuration.OverrideDefaultResultFactoryWith<FluentValidationExceptionResultFactory>();
+});
 
 builder.Services.AddControllers();
 
@@ -185,7 +195,7 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Sink(new SignalRLogSink(app.Services))
     .CreateLogger();
 
-app.UseMiddleware<CodexIQ.Api.Middlewares.ExceptionHandlingMiddleware>();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseHttpsRedirection();
 
@@ -193,7 +203,7 @@ app.UseAuthentication();
 app.UseCors("AllowFrontend");
 app.UseAuthorization();
 
-app.UseMiddleware<CodexIQ.Api.Middlewares.UserLogContextMiddleware>();
+app.UseMiddleware<UserLogContextMiddleware>();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
