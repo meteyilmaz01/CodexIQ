@@ -13,6 +13,7 @@ using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using CodexIQ.Infrastructure.RealTime;
 using Serilog;
 using Serilog.Context;
 using Serilog.Events;
@@ -35,18 +36,13 @@ var columnWriters = new Dictionary<string, ColumnWriterBase>
     { "UserRole", new SinglePropertyColumnWriter("UserRole", PropertyWriteMethod.Raw, NpgsqlDbType.Varchar) }
 };
 
+// İlk Logger (SignalR henüz hazır değil, sadece Console + DB)
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] [{UserName} ({UserRole})] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.PostgreSQL(
-        connectionString: connectionString,
-        tableName: "Logs",
-        columnOptions: columnWriters,
-        needAutoCreateTable: false,
-        respectCase: true)
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -173,6 +169,21 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// SignalR sink'i app build edildikten sonra ekliyoruz (IServiceProvider gerekli)
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] [{UserName} ({UserRole})] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.PostgreSQL(
+        connectionString: connectionString,
+        tableName: "Logs",
+        columnOptions: columnWriters,
+        needAutoCreateTable: false,
+        respectCase: true)
+    .WriteTo.Sink(new SignalRLogSink(app.Services))
+    .CreateLogger();
 
 app.UseMiddleware<CodexIQ.Api.Middlewares.ExceptionHandlingMiddleware>();
 
@@ -186,5 +197,6 @@ app.UseMiddleware<CodexIQ.Api.Middlewares.UserLogContextMiddleware>();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<LogHub>("/hubs/logs");
 
 app.Run();

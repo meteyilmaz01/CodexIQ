@@ -195,60 +195,18 @@ namespace CodexIQ.Infrastructure.Repository
 
         public async Task<List<AdminActivityDto>> GetLogsAsync(int take)
         {
-            var examActivities = await _context.Exams
-                .Include(x => x.Teacher)
-                .OrderByDescending(x => x.CreatedDate)
+            return await _context.Logs
+                .OrderByDescending(l => l.TimeStamp)
                 .Take(take)
-                .Select(x => new AdminActivityDto
+                .Select(l => new AdminActivityDto
                 {
-                    Type = "Exam",
-                    Message = $"{x.Teacher.FirstName} {x.Teacher.LastName} \"{x.Name}\" sınavını oluşturdu",
-                    OccurredAt = x.CreatedDate
+                    Type = l.Level ?? "Info",
+                    Message = !string.IsNullOrEmpty(l.UserName) && l.UserName != "Anonim"
+                        ? $"[{l.UserName} ({l.UserRole})] {l.Message}"
+                        : l.Message ?? string.Empty,
+                    OccurredAt = l.TimeStamp
                 })
                 .ToListAsync();
-
-            var uploadActivities = await _context.ExamPapers
-                .Include(x => x.Exam)
-                    .ThenInclude(e => e.Teacher)
-                .OrderByDescending(x => x.CreatedDate)
-                .Take(take)
-                .Select(x => new AdminActivityDto
-                {
-                    Type = "Upload",
-                    Message = $"{x.Exam.Teacher.FirstName} {x.Exam.Teacher.LastName} sınav kağıdı yükledi",
-                    OccurredAt = x.CreatedDate
-                })
-                .ToListAsync();
-
-            var userActivities = await _context.Users
-                .OrderByDescending(x => x.CreatedDate)
-                .Take(take)
-                .Select(x => new AdminActivityDto
-                {
-                    Type = "User",
-                    Message = $"Yeni {x.Role.ToString().ToLower()} kaydı: {x.FirstName} {x.LastName}",
-                    OccurredAt = x.CreatedDate
-                })
-                .ToListAsync();
-
-            var announcementActivities = await _context.Announcements
-                .OrderByDescending(x => x.CreatedDate)
-                .Take(take)
-                .Select(x => new AdminActivityDto
-                {
-                    Type = "Announcement",
-                    Message = $"Yeni duyuru yayınlandı: {x.Title}",
-                    OccurredAt = x.CreatedDate
-                })
-                .ToListAsync();
-
-            return examActivities
-                .Concat(uploadActivities)
-                .Concat(userActivities)
-                .Concat(announcementActivities)
-                .OrderByDescending(x => x.OccurredAt)
-                .Take(take)
-                .ToList();
         }
 
         public async Task<AdminApiCostsDto> GetApiCostsAsync()
