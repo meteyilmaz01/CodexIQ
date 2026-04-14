@@ -1,29 +1,30 @@
+using CodexIQ.Api.Middlewares;
 using CodexIQ.Application.Interfaces.CoreDataInterfaces;
 using CodexIQ.Application.Interfaces.ExternalServices;
 using CodexIQ.Application.Interfaces.Repositories;
 using CodexIQ.Application.Interfaces.Services;
 using CodexIQ.Application.Interfaces.Storage;
 using CodexIQ.Application.Services;
+using CodexIQ.Application.Validators.Auth;
 using CodexIQ.Infrastructure.Authentication;
+using CodexIQ.Infrastructure.ExternalServices;
 using CodexIQ.Infrastructure.Messaging;
 using CodexIQ.Infrastructure.Persistence;
+using CodexIQ.Infrastructure.RealTime;
 using CodexIQ.Infrastructure.Repository;
 using CodexIQ.Infrastructure.Storage;
+using FluentValidation;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using CodexIQ.Infrastructure.RealTime;
-using CodexIQ.Api.Middlewares;
-using CodexIQ.Application.Validators.Auth;
-using FluentValidation;
+using NpgsqlTypes;
 using Serilog;
 using Serilog.Context;
 using Serilog.Events;
+using Serilog.Sinks.PostgreSQL;
 using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
 using System.Text;
-using NpgsqlTypes;
-using Serilog.Sinks.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -91,8 +92,10 @@ builder.Services.AddScoped<ITeacherService, TeacherService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 builder.Services.AddScoped<IAdminService, AdminService>();
-
+builder.Services.AddHttpClient<IRabbitMqManagementService, RabbitMqManagementService>();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
+
+
 builder.Services.AddFluentValidationAutoValidation(configuration =>
 {
     configuration.DisableBuiltInModelValidation = true;
@@ -179,7 +182,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// SignalR sink'i app build edildikten sonra ekliyoruz (IServiceProvider gerekli)
+
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)

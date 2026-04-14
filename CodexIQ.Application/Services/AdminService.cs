@@ -7,11 +7,13 @@ public class AdminService : IAdminService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IRabbitMqManagementService _rabbitMqService;
 
-    public AdminService(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher)
+    public AdminService(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher, IRabbitMqManagementService rabbitMqService)
     {
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
+        _rabbitMqService = rabbitMqService;
     }
 
     public async Task<AdminDashboardDto> GetDashboardAsync()
@@ -252,5 +254,26 @@ public class AdminService : IAdminService
         => await _unitOfWork.Admin.GetApiCostsAsync();
 
     public async Task<AdminQueueDto> GetQueueAsync()
-        => await _unitOfWork.Admin.GetQueueAsync();
+    {
+        var queueDto = await _unitOfWork.Admin.GetQueueAsync();
+
+        var realQueues = await _rabbitMqService.GetQueuesAsync();
+
+        if (realQueues != null && realQueues.Any())
+        {
+            queueDto.Queues = realQueues
+                .Where(q => q.Name.Contains("exam") || q.Name.Contains("error") || q.Name.Contains("dead"))
+                .Select(q => new AdminQueueItemDto
+                {
+                    QueueName = q.Name,
+                    ReadyCount = q.MessagesReady,
+                    UnackedCount = q.MessagesUnacknowledged,
+                    TotalCount = q.Messages,
+                    Status = q.State == "running" ? "Active" : "Idle"
+                })
+                .ToList();
+        }
+
+        return queueDto;
+    }
 }

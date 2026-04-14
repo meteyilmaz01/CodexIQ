@@ -325,8 +325,8 @@ namespace CodexIQ.Infrastructure.Repository
                 Total = pending + extracting + evaluating + completed + failed,
                 Queues = new List<AdminQueueItemDto>
                 {
-                    new() { QueueName = "evaluate-exam-queue", ApproximateCount = pending, Status = "Active" },
-                    new() { QueueName = "exam-results-queue", ApproximateCount = extracting + evaluating, Status = "Active" }
+                    new() { QueueName = "evaluate-exam-queue", TotalCount = pending, Status = "Active" },
+                    new() { QueueName = "exam-results-queue", TotalCount = extracting + evaluating, Status = "Active" }
                 }
             };
         }
