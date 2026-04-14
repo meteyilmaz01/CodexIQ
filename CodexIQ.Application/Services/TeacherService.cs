@@ -1,4 +1,5 @@
 ﻿
+using CodexIQ.Application.Exceptions;
 using CodexIQ.Application.Interfaces.CoreDataInterfaces;
 using CodexIQ.Application.Interfaces.Services;
 using CodexIQ.Application.Interfaces.Storage;
@@ -104,7 +105,7 @@ public class TeacherService : ITeacherService
         Guid teacherId, Guid examId, List<IFormFile> files)
     {
         var exam = await _unitOfWork.Teacher.GetExamByIdAsync(examId, teacherId);
-        if (exam == null) throw new Exception("Sınav bulunamadı");
+        if (exam == null) throw new NotFoundException("Sınav bulunamadı");
 
         var papers = new List<ExamPaper>();
         var fileNames = new List<string>();
@@ -138,7 +139,7 @@ public class TeacherService : ITeacherService
     public async Task SaveRubricAsync(Guid teacherId, Guid examId, SaveRubricRequestDto request)
     {
         var exam = await _unitOfWork.Teacher.GetExamByIdAsync(examId, teacherId);
-        if (exam == null) throw new Exception("Sınav bulunamadı");
+        if (exam == null) throw new NotFoundException("Sınav bulunamadı");
         await _unitOfWork.Teacher.DeleteRubricByExamIdAsync(examId);
 
         var criterias = request.Items.Select(item => new RubricCriteria
@@ -155,10 +156,10 @@ public class TeacherService : ITeacherService
     public async Task StartEvaluationAsync(Guid teacherId, Guid examId)
     {
         var exam = await _unitOfWork.Teacher.GetExamByIdAsync(examId, teacherId);
-        if (exam == null) throw new Exception("Sınav bulunamadı");
+        if (exam == null) throw new NotFoundException("Sınav bulunamadı");
 
         if (!exam.ExamPaper.Any())
-            throw new Exception("Sınav kağıdı yüklenmemiş");
+            throw new BusinessException("Sınav kağıdı yüklenmemiş");
 
         foreach (var paper in exam.ExamPaper.Where(p => p.Status == EvaluationStatus.Pending))
         {
@@ -256,7 +257,7 @@ public class TeacherService : ITeacherService
     public async Task OverrideScoreAsync(Guid teacherId, Guid examPaperId, OverrideScoreRequestDto request)
     {
         var paper = await _unitOfWork.Teacher.GetResultDetailAsync(teacherId, examPaperId);
-        if (paper?.FinalEvaluation == null) throw new Exception("Sonuç bulunamadı");
+        if (paper?.FinalEvaluation == null) throw new NotFoundException("Sonuç bulunamadı");
 
         if (!paper.FinalEvaluation.IsOverridden)
         {
@@ -271,7 +272,7 @@ public class TeacherService : ITeacherService
     public async Task UpdateNoteAsync(Guid teacherId, Guid examPaperId, UpdateNoteRequestDto request)
     {
         var paper = await _unitOfWork.Teacher.GetResultDetailAsync(teacherId, examPaperId);
-        if (paper?.FinalEvaluation == null) throw new Exception("Sonuç bulunamadı");
+        if (paper?.FinalEvaluation == null) throw new NotFoundException("Sonuç bulunamadı");
 
         paper.FinalEvaluation.TeacherNote = request.Note;
         await _unitOfWork.SaveChangesAsync();
@@ -280,7 +281,7 @@ public class TeacherService : ITeacherService
     public async Task ShareResultAsync(Guid teacherId, Guid examPaperId)
     {
         var paper = await _unitOfWork.Teacher.GetResultDetailAsync(teacherId, examPaperId);
-        if (paper?.FinalEvaluation == null) throw new Exception("Sonuç bulunamadı");
+        if (paper?.FinalEvaluation == null) throw new NotFoundException("Sonuç bulunamadı");
 
         paper.FinalEvaluation.IsShared = true;
         await _unitOfWork.SaveChangesAsync();
@@ -353,7 +354,7 @@ public class TeacherService : ITeacherService
     public async Task<TeacherProfileDto> GetProfileAsync(Guid teacherId)
     {
         var user = await _unitOfWork.User.GetByIdAsync(teacherId);
-        if (user == null) throw new Exception("Kullanıcı bulunamadı");
+        if (user == null) throw new NotFoundException("Kullanıcı bulunamadı");
 
         return new TeacherProfileDto
         {
@@ -366,7 +367,7 @@ public class TeacherService : ITeacherService
     public async Task UpdateProfileAsync(Guid teacherId, UpdateTeacherProfileRequestDto request)
     {
         var user = await _unitOfWork.User.GetByIdAsync(teacherId);
-        if (user == null) throw new Exception("Kullanıcı bulunamadı");
+        if (user == null) throw new NotFoundException("Kullanıcı bulunamadı");
 
         user.FirstName = request.FirstName;
         user.LastName = request.LastName;

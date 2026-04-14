@@ -1,5 +1,4 @@
 using CodexIQ.Application.Interfaces.Services;
-using CodexIQ.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -69,7 +68,7 @@ public class StudentController : ControllerBase
         if (result == null)
         {
             _logger.LogWarning("Sonuç bulunamadı (ExamPaperId: {Id})", id);
-            return NotFound(new { success = false, message = "Sonuç bulunamadı" });
+            throw new CodexIQ.Application.Exceptions.NotFoundException("Sonuç bulunamadı");
         }
 
         _logger.LogInformation("Sınav sonucu detayı görüntülendi (ExamPaperId: {Id})", id);

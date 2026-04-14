@@ -1,4 +1,5 @@
-﻿using CodexIQ.Application.DTOs.AuthDTOs;
+using CodexIQ.Application.DTOs.AuthDTOs;
+using CodexIQ.Application.Exceptions;
 using CodexIQ.Application.Interfaces.Services;
 using CodexIQ.Application.Validators.Auth;
 using Microsoft.AspNetCore.Authorization;
@@ -22,48 +23,29 @@ namespace CodexIQ.Api.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
-
             var validator = new LoginRequestValidator();
             var validationResult = await validator.ValidateAsync(request);
 
             if (!validationResult.IsValid)
             {
                 _logger.LogWarning("Login doğrulama başarısız: {Email}", request.Email);
-                return BadRequest(new
-                {
-                    success = false,
-                    errors = validationResult.Errors.Select(e => e.ErrorMessage)
-                });
+                throw new ValidationException(
+                    validationResult.Errors.Select(e => e.ErrorMessage).ToList());
             }
-            try
-            {
-                var response = await _authService.LoginAsync(request);
-                _logger.LogInformation("Login başarılı: {Email}", request.Email);
-                return Ok(new { success = true, data = response });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Login başarısız: {Email}", request.Email);
-                return BadRequest(new { success = false, message = ex.Message });
-            }
+
+            var response = await _authService.LoginAsync(request);
+            _logger.LogInformation("Login başarılı: {Email}", request.Email);
+            return Ok(new { success = true, data = response });
         }
 
         [HttpPut("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request)
         {
-            try
-            {
-                var userId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
-                await _authService.ChangePasswordAsync(userId, request);
-                _logger.LogInformation("Şifre değiştirildi");
-                return Ok(new { success = true, message = "Şifre değiştirildi" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Şifre değiştirme başarısız");
-                return BadRequest(new { success = false, message = ex.Message });
-            }
+            var userId = Guid.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+            await _authService.ChangePasswordAsync(userId, request);
+            _logger.LogInformation("Şifre değiştirildi");
+            return Ok(new { success = true, message = "Şifre değiştirildi" });
         }
     }
 }

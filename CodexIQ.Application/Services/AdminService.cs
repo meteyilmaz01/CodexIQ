@@ -1,4 +1,5 @@
-﻿using CodexIQ.Application.Interfaces.CoreDataInterfaces;
+﻿using CodexIQ.Application.Exceptions;
+using CodexIQ.Application.Interfaces.CoreDataInterfaces;
 
 public class AdminService : IAdminService
 {
@@ -29,7 +30,7 @@ public class AdminService : IAdminService
     public async Task UpdateUserStatusAsync(Guid userId, bool isActive)
     {
         var user = await _unitOfWork.Admin.GetUserEntityByIdAsync(userId);
-        if (user == null) throw new Exception("Kullanıcı bulunamadı");
+        if (user == null) throw new NotFoundException("Kullanıcı bulunamadı");
 
         user.IsActive = isActive;
         _unitOfWork.User.Update(user);
@@ -55,7 +56,7 @@ public class AdminService : IAdminService
     public async Task UpdateAnnouncementAsync(Guid id, UpdateAnnouncementRequestDto request)
     {
         var entity = await _unitOfWork.Admin.GetAnnouncementEntityByIdAsync(id);
-        if (entity == null) throw new Exception("Duyuru bulunamadı");
+        if (entity == null) throw new NotFoundException("Duyuru bulunamadı");
 
         entity.Title = request.Title;
         entity.Content = request.Content;
@@ -67,7 +68,7 @@ public class AdminService : IAdminService
     public async Task DeleteAnnouncementAsync(Guid id)
     {
         var entity = await _unitOfWork.Admin.GetAnnouncementEntityByIdAsync(id);
-        if (entity == null) throw new Exception("Duyuru bulunamadı");
+        if (entity == null) throw new NotFoundException("Duyuru bulunamadı");
 
         _unitOfWork.Admin.DeleteAnnouncement(entity);
         await _unitOfWork.SaveChangesAsync();
@@ -79,7 +80,7 @@ public class AdminService : IAdminService
     public async Task CreateClassAsync(CreateClassRequestDto request)
     {
         var teacherExists = await _unitOfWork.Admin.TeacherExistsAsync(request.TeacherId);
-        if (!teacherExists) throw new Exception("Geçerli bir öğretmen bulunamadı");
+        if (!teacherExists) throw new NotFoundException("Geçerli bir öğretmen bulunamadı");
 
         var entity = new CodexIQ.Domain.Entities.Class
         {
@@ -94,7 +95,7 @@ public class AdminService : IAdminService
     public async Task CreateCourseAsync(CreateCourseRequestDto request)
     {
         var classExists = await _unitOfWork.Admin.ClassExistsAsync(request.ClassId);
-        if (!classExists) throw new Exception("Sınıf bulunamadı");
+        if (!classExists) throw new NotFoundException("Sınıf bulunamadı");
 
         var entity = new CodexIQ.Domain.Entities.Course
         {

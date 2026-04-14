@@ -1,4 +1,5 @@
 ﻿using CodexIQ.Application.DTOs.StudentsDTOs.StudentDashboardDTOS;
+using CodexIQ.Application.Exceptions;
 using CodexIQ.Application.Interfaces.CoreDataInterfaces;
 using CodexIQ.Application.Interfaces.Services;
 using System;
@@ -39,7 +40,7 @@ namespace CodexIQ.Application.Services
         public async Task<StudentProfileDto> GetProfileAsync(Guid studentId)
         {
             var user = await _unitOfWork.User.GetByIdAsync(studentId);
-            if (user == null) throw new Exception("Kullanıcı bulunamadı");
+            if (user == null) throw new NotFoundException("Kullanıcı bulunamadı");
 
             return new StudentProfileDto
             {
@@ -52,7 +53,7 @@ namespace CodexIQ.Application.Services
         public async Task UpdateProfileAsync(Guid studentId, UpdateProfileRequestDto request)
         {
             var user = await _unitOfWork.User.GetByIdAsync(studentId);
-            if (user == null) throw new Exception("Kullanıcı bulunamadı");
+            if (user == null) throw new NotFoundException("Kullanıcı bulunamadı");
 
             user.FirstName = request.FirstName;
             user.LastName = request.LastName;

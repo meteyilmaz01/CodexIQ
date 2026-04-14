@@ -137,6 +137,8 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 
+app.UseMiddleware<CodexIQ.Api.Middlewares.ExceptionHandlingMiddleware>();
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

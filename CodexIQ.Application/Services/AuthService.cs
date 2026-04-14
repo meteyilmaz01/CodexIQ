@@ -1,5 +1,6 @@
 ﻿using CodexIQ.Application.DTOs.AuthDTOs;
-using CodexIQ.Application.Interfaces.CoreDataInterfaces; 
+using CodexIQ.Application.Exceptions;
+using CodexIQ.Application.Interfaces.CoreDataInterfaces;
 using CodexIQ.Application.Interfaces.ExternalServices;
 using CodexIQ.Application.Interfaces.Services;
 
@@ -21,10 +22,10 @@ namespace CodexIQ.Application.Services
         public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequestDto request)
         {
             var user = await _unitOfWork.User.GetByIdAsync(userId);
-            if (user == null) throw new Exception("Kullanıcı bulunamadı");
+            if (user == null) throw new NotFoundException("Kullanıcı bulunamadı");
 
             var isValid = _passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash);
-            if (!isValid) throw new Exception("Mevcut şifre hatalı");
+            if (!isValid) throw new UnauthorizedException("Mevcut şifre hatalı");
 
             user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
             _unitOfWork.User.Update(user);
@@ -36,11 +37,11 @@ namespace CodexIQ.Application.Services
             var user = await _unitOfWork.User.GetByEmailAsync(request.Email);
 
             if (user == null)
-                throw new Exception("User not found or email address is incorrect.");
+                throw new UnauthorizedException("User not found or email address is incorrect.");
 
             bool isPasswordValid = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
             if (!isPasswordValid)
-                throw new Exception("You entered the wrong password.");
+                throw new UnauthorizedException("You entered the wrong password.");
 
             string token = _jwtProvider.GenerateToken(user);
 
