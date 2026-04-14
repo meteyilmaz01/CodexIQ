@@ -1,4 +1,6 @@
-﻿public class AdminClassListItemDto
+﻿using CodexIQ.Application.DTOs.AdminDTOs;
+
+public class AdminClassListItemDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;

@@ -1,4 +1,5 @@
-﻿using CodexIQ.Application.Interfaces.Repositories;
+﻿using CodexIQ.Application.DTOs.AdminDTOs;
+using CodexIQ.Application.Interfaces.Repositories;
 using CodexIQ.Domain.Entities;
 using CodexIQ.Domain.Enums;
 using CodexIQ.Infrastructure.Persistence;
@@ -207,6 +208,54 @@ namespace CodexIQ.Infrastructure.Repository
         {
             _context.Classrooms.Remove(classroom);
         }
+
+        public async Task<Course?> GetCourseEntityByIdAsync(Guid id)
+    {
+        return await _context.Courses.FirstOrDefaultAsync(x => x.Id == id);
+    }
+
+    public void UpdateCourse(Course course)
+    {
+        _context.Courses.Update(course);
+    }
+
+    public void DeleteCourse(Course course)
+    {
+        _context.Courses.Remove(course);
+    }
+
+    public async Task<(List<AdminCourseListItemDto> Items, int TotalCount)> GetCoursesAsync(
+        string? search, Guid? classId, bool? isActive, int page, int pageSize)
+    {
+        var query = _context.Courses.Include(x => x.Class).AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(x => x.Name.ToLower().Contains(search.ToLower()));
+
+        if (classId.HasValue)
+            query = query.Where(x => x.ClassId == classId.Value);
+
+        if (isActive.HasValue)
+            query = query.Where(x => x.IsActive == isActive.Value);
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(x => x.CreatedDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new AdminCourseListItemDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                ClassId = x.ClassId,
+                ClassName = x.Class.Name,
+                CreatedDate = x.CreatedDate
+            })
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
 
         public async Task<List<AdminActivityDto>> GetLogsAsync(int take)
         {

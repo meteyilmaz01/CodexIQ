@@ -25,6 +25,12 @@ public interface IAdminService
     Task UpdateClassStatusAsync(Guid id, bool isActive);
     Task DeleteClassAsync(Guid id);
 
+    Task UpdateCourseAsync(Guid id, UpdateCourseRequestDto request);
+    Task UpdateCourseStatusAsync(Guid id, bool isActive);
+    Task DeleteCourseAsync(Guid id);
+    Task<PaginatedResult<AdminCourseListItemDto>> GetCoursesAsync(
+        string? search, Guid? classId, bool? isActive, int page, int pageSize);
+
     Task<List<AdminActivityDto>> GetLogsAsync(int take);
     Task<AdminApiCostsDto> GetApiCostsAsync();
     Task<AdminQueueDto> GetQueueAsync();

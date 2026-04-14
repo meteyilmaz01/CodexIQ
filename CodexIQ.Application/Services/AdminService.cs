@@ -197,6 +197,54 @@ public class AdminService : IAdminService
         await _unitOfWork.SaveChangesAsync();
     }
 
+    public async Task UpdateCourseAsync(Guid id, UpdateCourseRequestDto request)
+    {
+        var course = await _unitOfWork.Admin.GetCourseEntityByIdAsync(id);
+        if (course == null) throw new NotFoundException("Ders bulunamadı");
+
+        var classExists = await _unitOfWork.Admin.ClassExistsAsync(request.ClassId);
+        if (!classExists) throw new NotFoundException("Seçilen sınıf bulunamadı");
+
+        course.Name = request.Name;
+        course.ClassId = request.ClassId;
+
+        _unitOfWork.Admin.UpdateCourse(course);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task UpdateCourseStatusAsync(Guid id, bool isActive)
+    {
+        var course = await _unitOfWork.Admin.GetCourseEntityByIdAsync(id);
+        if (course == null) throw new NotFoundException("Ders bulunamadı");
+
+        course.IsActive = isActive;
+        _unitOfWork.Admin.UpdateCourse(course);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task DeleteCourseAsync(Guid id)
+    {
+        var course = await _unitOfWork.Admin.GetCourseEntityByIdAsync(id);
+        if (course == null) throw new NotFoundException("Ders bulunamadı");
+
+        _unitOfWork.Admin.DeleteCourse(course);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task<PaginatedResult<AdminCourseListItemDto>> GetCoursesAsync(
+        string? search, Guid? classId, bool? isActive, int page, int pageSize)
+    {
+        var (items, totalCount) = await _unitOfWork.Admin.GetCoursesAsync(search, classId, isActive, page, pageSize);
+
+        return new PaginatedResult<AdminCourseListItemDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
     public async Task<List<AdminActivityDto>> GetLogsAsync(int take)
         => await _unitOfWork.Admin.GetLogsAsync(take);
 

@@ -1,4 +1,5 @@
-﻿using CodexIQ.Domain.Entities;
+﻿using CodexIQ.Application.DTOs.AdminDTOs;
+using CodexIQ.Domain.Entities;
 using CodexIQ.Domain.Enums;
 
 public interface IAdminRepository
@@ -22,6 +23,12 @@ public interface IAdminRepository
     Task<Class?> GetClassEntityByIdAsync(Guid id);
     void UpdateClass(Class classroom);
     void DeleteClass(Class classroom);
+
+    Task<Course?> GetCourseEntityByIdAsync(Guid id);
+    void UpdateCourse(Course course);
+    void DeleteCourse(Course course);
+    Task<(List<AdminCourseListItemDto> Items, int TotalCount)> GetCoursesAsync(
+        string? search, Guid? classId, bool? isActive, int page, int pageSize);
 
     Task<List<AdminActivityDto>> GetLogsAsync(int take);
     Task<AdminApiCostsDto> GetApiCostsAsync();

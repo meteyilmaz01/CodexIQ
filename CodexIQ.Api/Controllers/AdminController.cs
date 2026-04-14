@@ -151,6 +151,42 @@ public class AdminController : ControllerBase
         return Ok(new { success = true, message = "Sınıf silindi" });
     }
 
+    [HttpGet("courses")]
+    public async Task<IActionResult> GetCourses(
+        [FromQuery] string? search,
+        [FromQuery] Guid? classId,
+        [FromQuery] bool? isActive,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        _logger.LogInformation("Ders listesi görüntülendi");
+        return Ok(await _adminService.GetCoursesAsync(search, classId, isActive, page, pageSize));
+    }
+
+    [HttpPut("courses/{id:guid}")]
+    public async Task<IActionResult> UpdateCourse(Guid id, [FromBody] UpdateCourseRequestDto request)
+    {
+        await _adminService.UpdateCourseAsync(id, request);
+        _logger.LogInformation("Ders güncellendi: {CourseName} (Id: {Id})", request.Name, id);
+        return Ok(new { success = true, message = "Ders güncellendi" });
+    }
+
+    [HttpPatch("courses/{id:guid}/status")]
+    public async Task<IActionResult> UpdateCourseStatus(Guid id, [FromBody] UpdateCourseStatusRequestDto request)
+    {
+        await _adminService.UpdateCourseStatusAsync(id, request.IsActive);
+        _logger.LogInformation("Ders durumu güncellendi: {Status} (Id: {Id})", request.IsActive ? "Aktif" : "Pasif", id);
+        return Ok(new { success = true, message = "Ders durumu güncellendi" });
+    }
+
+    [HttpDelete("courses/{id:guid}")]
+    public async Task<IActionResult> DeleteCourse(Guid id)
+    {
+        await _adminService.DeleteCourseAsync(id);
+        _logger.LogWarning("Ders silindi (Id: {Id})", id);
+        return Ok(new { success = true, message = "Ders silindi" });
+    }
+
     [HttpGet("logs")]
     public async Task<IActionResult> GetLogs([FromQuery] int take = 20)
     {
