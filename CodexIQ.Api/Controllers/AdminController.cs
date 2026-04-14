@@ -127,6 +127,30 @@ public class AdminController : ControllerBase
         return Ok(new { success = true, message = "Ders oluşturuldu" });
     }
 
+    [HttpPut("classes/{id:guid}")]
+    public async Task<IActionResult> UpdateClass(Guid id, [FromBody] UpdateClassRequestDto request)
+    {
+        await _adminService.UpdateClassAsync(id, request);
+        _logger.LogInformation("Sınıf güncellendi: {ClassName} (Id: {Id})", request.Name, id);
+        return Ok(new { success = true, message = "Sınıf güncellendi" });
+    }
+
+    [HttpPatch("classes/{id:guid}/status")]
+    public async Task<IActionResult> UpdateClassStatus(Guid id, [FromBody] UpdateClassStatusRequestDto request)
+    {
+        await _adminService.UpdateClassStatusAsync(id, request.IsActive);
+        _logger.LogInformation("Sınıf durumu güncellendi: {Status} (Id: {Id})", request.IsActive ? "Aktif" : "Pasif", id);
+        return Ok(new { success = true, message = "Sınıf durumu güncellendi" });
+    }
+
+    [HttpDelete("classes/{id:guid}")]
+    public async Task<IActionResult> DeleteClass(Guid id)
+    {
+        await _adminService.DeleteClassAsync(id);
+        _logger.LogWarning("Sınıf silindi (Id: {Id})", id);
+        return Ok(new { success = true, message = "Sınıf silindi" });
+    }
+
     [HttpGet("logs")]
     public async Task<IActionResult> GetLogs([FromQuery] int take = 20)
     {

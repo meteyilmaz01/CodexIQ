@@ -163,6 +163,40 @@ public class AdminService : IAdminService
         await _unitOfWork.SaveChangesAsync();
     }
 
+    public async Task UpdateClassAsync(Guid id, UpdateClassRequestDto request)
+    {
+        var classroom = await _unitOfWork.Admin.GetClassEntityByIdAsync(id);
+        if (classroom == null) throw new NotFoundException("Sınıf bulunamadı");
+
+        var teacherExists = await _unitOfWork.Admin.TeacherExistsAsync(request.TeacherId);
+        if (!teacherExists) throw new NotFoundException("Seçilen öğretmen bulunamadı");
+
+        classroom.Name = request.Name;
+        classroom.TeacherId = request.TeacherId;
+
+        _unitOfWork.Admin.UpdateClass(classroom);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task UpdateClassStatusAsync(Guid id, bool isActive)
+    {
+        var classroom = await _unitOfWork.Admin.GetClassEntityByIdAsync(id);
+        if (classroom == null) throw new NotFoundException("Sınıf bulunamadı");
+
+        classroom.IsActive = isActive;
+
+        _unitOfWork.Admin.UpdateClass(classroom);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task DeleteClassAsync(Guid id)
+    {
+        var classroom = await _unitOfWork.Admin.GetClassEntityByIdAsync(id);
+        if (classroom == null) throw new NotFoundException("Sınıf bulunamadı");
+        _unitOfWork.Admin.DeleteClass(classroom);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
     public async Task<List<AdminActivityDto>> GetLogsAsync(int take)
         => await _unitOfWork.Admin.GetLogsAsync(take);
 

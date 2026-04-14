@@ -193,6 +193,21 @@ namespace CodexIQ.Infrastructure.Repository
             await _context.Courses.AddAsync(course);
         }
 
+        public async Task<Class?> GetClassEntityByIdAsync(Guid id)
+        {
+            return await _context.Classrooms.FirstOrDefaultAsync(x => x.Id == id);
+        }
+
+        public void UpdateClass(Class classroom)
+        {
+            _context.Classrooms.Update(classroom);
+        }
+
+        public void DeleteClass(Class classroom)
+        {
+            _context.Classrooms.Remove(classroom);
+        }
+
         public async Task<List<AdminActivityDto>> GetLogsAsync(int take)
         {
             return await _context.Logs

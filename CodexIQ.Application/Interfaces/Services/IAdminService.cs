@@ -21,6 +21,10 @@ public interface IAdminService
     Task CreateClassAsync(CreateClassRequestDto request);
     Task CreateCourseAsync(CreateCourseRequestDto request);
 
+    Task UpdateClassAsync(Guid id, UpdateClassRequestDto request);
+    Task UpdateClassStatusAsync(Guid id, bool isActive);
+    Task DeleteClassAsync(Guid id);
+
     Task<List<AdminActivityDto>> GetLogsAsync(int take);
     Task<AdminApiCostsDto> GetApiCostsAsync();
     Task<AdminQueueDto> GetQueueAsync();

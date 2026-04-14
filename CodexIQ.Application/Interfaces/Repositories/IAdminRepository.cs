@@ -19,6 +19,9 @@ public interface IAdminRepository
     Task<bool> ClassExistsAsync(Guid classId);
     Task AddClassAsync(Class classroom);
     Task AddCourseAsync(Course course);
+    Task<Class?> GetClassEntityByIdAsync(Guid id);
+    void UpdateClass(Class classroom);
+    void DeleteClass(Class classroom);
 
     Task<List<AdminActivityDto>> GetLogsAsync(int take);
     Task<AdminApiCostsDto> GetApiCostsAsync();
