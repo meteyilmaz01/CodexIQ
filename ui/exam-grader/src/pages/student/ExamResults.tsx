@@ -1,27 +1,55 @@
-import { useState } from "react";
-import { Card, Table, Tag, Input, Select, Typography, Button } from "antd";
+import { useState, useEffect } from "react";
+import { Card, Table, Tag, Input, Select, Typography, Button, Spin } from "antd";
 import { SearchOutlined, EyeOutlined, FilterOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
+import { studentApi } from "../../api/studentApi";
 
 const { Title, Text } = Typography;
-
-const mockResults = [
-  { id: 1, name: "Veri Yapıları - Final", course: "Veri Yapıları", date: "2026-03-28", score: 85, syntaxErrors: 2, logicErrors: 1, status: "Yayınlandı" },
-  { id: 2, name: "Algoritma Analizi - Vize", course: "Algoritma", date: "2026-03-15", score: 72, syntaxErrors: 4, logicErrors: 3, status: "Yayınlandı" },
-  { id: 3, name: "OOP - Quiz 3", course: "OOP", date: "2026-03-05", score: 90, syntaxErrors: 1, logicErrors: 0, status: "Yayınlandı" },
-  { id: 4, name: "Veritabanı - Ödev 2", course: "Veritabanı", date: "2026-02-20", score: 65, syntaxErrors: 5, logicErrors: 4, status: "Yayınlandı" },
-  { id: 5, name: "C Programlama - Vize", course: "C Programlama", date: "2026-02-10", score: 58, syntaxErrors: 7, logicErrors: 5, status: "Yayınlandı" },
-  { id: 6, name: "Veri Yapıları - Vize", course: "Veri Yapıları", date: "2026-01-25", score: 73, syntaxErrors: 3, logicErrors: 2, status: "Yayınlandı" },
-];
 
 const ExamResults = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState<string | null>(null);
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const colors = useThemeColors();
   const t = useT();
+
+  const fetchResults = async (page = 1, pageSize = 10) => {
+    setLoading(true);
+    try {
+      const res = await studentApi.getResults({
+        search: search || undefined,
+        course: courseFilter || undefined,
+        page,
+        pageSize,
+      });
+      const data = res.data || res;
+      if (Array.isArray(data)) {
+        setResults(data);
+        setPagination({ current: page, pageSize, total: data.length });
+      } else {
+        setResults(data.items || data.results || []);
+        setPagination({ current: page, pageSize, total: data.totalCount || data.total || 0 });
+      }
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchResults(); }, []);
+
+  const handleSearch = () => { fetchResults(1, pagination.pageSize); };
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchResults(1, pagination.pageSize), 500);
+    return () => clearTimeout(timer);
+  }, [search, courseFilter]);
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return "#52c41a";
@@ -30,72 +58,49 @@ const ExamResults = () => {
     return "#ff4d4f";
   };
 
-  const filteredResults = mockResults.filter((r) => {
-    const matchSearch = r.name.toLowerCase().includes(search.toLowerCase());
-    const matchCourse = !courseFilter || r.course === courseFilter;
-    return matchSearch && matchCourse;
-  });
-
-  const courses = [...new Set(mockResults.map((r) => r.course))];
+  const courses = [...new Set(results.map((r: any) => r.course || r.courseName).filter(Boolean))];
 
   const columns = [
     {
-      title: t("exam"),
-      dataIndex: "name",
-      key: "name",
-      render: (text: string, record: (typeof mockResults)[0]) => (
+      title: t("exam"), dataIndex: "name", key: "name",
+      render: (text: string, record: any) => (
         <div>
-          <Text style={{ color: colors.textSecondary, fontSize: 14, display: "block" }}>{text}</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 14, display: "block" }}>{text || record.examName}</Text>
           <Text style={{ color: colors.textMuted, fontSize: 12 }}>{record.date}</Text>
         </div>
       ),
     },
     {
-      title: t("course"),
-      dataIndex: "course",
-      key: "course",
-      responsive: ["md" as const],
-      render: (text: string) => <Tag style={{ borderRadius: 6 }}>{text}</Tag>,
+      title: t("course"), key: "course", responsive: ["md" as const],
+      render: (_: unknown, record: any) => <Tag style={{ borderRadius: 6 }}>{record.course || record.courseName}</Tag>,
     },
     {
-      title: t("score"),
-      dataIndex: "score",
-      key: "score",
-      sorter: (a: (typeof mockResults)[0], b: (typeof mockResults)[0]) => a.score - b.score,
-      render: (score: number) => (
-        <span style={{ fontSize: 20, fontWeight: 700, color: getScoreColor(score), fontFamily: "'JetBrains Mono'" }}>
-          {score}
+      title: t("score"), key: "score",
+      sorter: (a: any, b: any) => (a.score || a.totalScore || 0) - (b.score || b.totalScore || 0),
+      render: (_: unknown, record: any) => (
+        <span style={{ fontSize: 20, fontWeight: 700, color: getScoreColor(record.score || record.totalScore || 0), fontFamily: "'JetBrains Mono'" }}>
+          {record.score || record.totalScore || 0}
         </span>
       ),
     },
     {
-      title: t("syntaxError"),
-      dataIndex: "syntaxErrors",
-      key: "syntaxErrors",
-      responsive: ["lg" as const],
-      render: (count: number) => (
-        <Tag color={count === 0 ? "success" : count <= 3 ? "warning" : "error"}>{count} {t("errors")}</Tag>
-      ),
+      title: t("syntaxError"), key: "syntaxErrors", responsive: ["lg" as const],
+      render: (_: unknown, record: any) => {
+        const count = record.syntaxErrors ?? record.syntaxErrorCount ?? 0;
+        return <Tag color={count === 0 ? "success" : count <= 3 ? "warning" : "error"}>{count} {t("errors")}</Tag>;
+      },
     },
     {
-      title: t("logicError"),
-      dataIndex: "logicErrors",
-      key: "logicErrors",
-      responsive: ["lg" as const],
-      render: (count: number) => (
-        <Tag color={count === 0 ? "success" : count <= 2 ? "warning" : "error"}>{count} {t("errors")}</Tag>
-      ),
+      title: t("logicError"), key: "logicErrors", responsive: ["lg" as const],
+      render: (_: unknown, record: any) => {
+        const count = record.logicErrors ?? record.logicErrorCount ?? 0;
+        return <Tag color={count === 0 ? "success" : count <= 2 ? "warning" : "error"}>{count} {t("errors")}</Tag>;
+      },
     },
     {
-      title: "",
-      key: "action",
-      render: (_: unknown, record: (typeof mockResults)[0]) => (
-        <Button
-          type="text"
-          icon={<EyeOutlined />}
-          onClick={() => navigate(`/student/results/${record.id}`)}
-          style={{ color: colors.accent }}
-        >
+      title: "", key: "action",
+      render: (_: unknown, record: any) => (
+        <Button type="text" icon={<EyeOutlined />} onClick={() => navigate(`/student/results/${record.id}`)} style={{ color: colors.accent }}>
           {t("detail")}
         </Button>
       ),
@@ -105,54 +110,32 @@ const ExamResults = () => {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <Title level={4} style={{ color: colors.textPrimary, margin: 0, fontFamily: "'JetBrains Mono'" }}>
-          {t("examResults")}
-        </Title>
+        <Title level={4} style={{ color: colors.textPrimary, margin: 0, fontFamily: "'JetBrains Mono'" }}>{t("examResults")}</Title>
         <Text style={{ color: colors.textMuted }}>{t("examResultsSubtitle")}</Text>
       </div>
 
-      {/* Filters */}
-      <Card
-        style={{
-          background: colors.cardBg,
-          border: colors.borderPrimary,
-          borderRadius: 12,
-          marginBottom: 16,
-        }}
-        styles={{ body: { padding: "12px 16px" } }}
-      >
+      <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16 }} styles={{ body: { padding: "12px 16px" } }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <Input
-            placeholder={t("searchExam")}
-            prefix={<SearchOutlined style={{ color: colors.textDimmed }} />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("searchExam")} prefix={<SearchOutlined style={{ color: colors.textDimmed }} />}
+            value={search} onChange={(e) => setSearch(e.target.value)}
             style={{ maxWidth: 280, background: colors.inputBg, borderColor: colors.textDimmed }}
           />
           <Select
-            placeholder={<><FilterOutlined /> {t("filterCourse")}</>}
-            allowClear
-            onChange={(val) => setCourseFilter(val)}
-            style={{ minWidth: 180 }}
+            placeholder={<><FilterOutlined /> {t("filterCourse")}</>} allowClear
+            onChange={(val) => setCourseFilter(val)} style={{ minWidth: 180 }}
             options={courses.map((c) => ({ label: c, value: c }))}
           />
         </div>
       </Card>
 
-      {/* Results Table */}
-      <Card
-        style={{
-          background: colors.cardBg,
-          border: colors.borderPrimary,
-          borderRadius: 12,
-        }}
-        styles={{ body: { padding: 0 } }}
-      >
+      <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }} styles={{ body: { padding: 0 } }}>
         <Table
-          dataSource={filteredResults}
-          columns={columns}
-          rowKey="id"
-          pagination={{ pageSize: 10 }}
+          dataSource={results} columns={columns} rowKey="id" loading={loading}
+          pagination={{
+            current: pagination.current, pageSize: pagination.pageSize, total: pagination.total,
+            onChange: (page, pageSize) => fetchResults(page, pageSize),
+          }}
           style={{ overflow: "auto" }}
         />
       </Card>

@@ -4,7 +4,19 @@
       "Bash(dotnet add:*)",
       "Bash(dotnet ef:*)",
       "Bash(dotnet tool:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(npm install:*)",
+      "Read(//mnt/c/Users/Win11/source/repos/**)",
+      "Read(//c//**)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(git checkout:*)",
+      "Bash(ls /c/Users/Win11/source/repos/CodexIQ.Api/ui/exam-grader/playwright.config.*)",
+      "Bash(npm init:*)",
+      "Bash(npx playwright:*)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/tmp/pw_result.json','utf8'\\)\\);d.suites[0].suites[0].specs.filter\\(s=>s.tests[0].results[0].status!=='passed'\\).forEach\\(s=>{console.log\\('FAILED:',s.title\\);console.log\\(s.tests[0].results[0].error?.message?.substring\\(0,500\\)\\);console.log\\('---'\\);}\\)\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);j.suites[0].suites[0].specs.filter\\(s=>s.tests[0].results[0].status!=='passed'\\).forEach\\(s=>{console.log\\('FAIL:',s.title\\);console.log\\(s.tests[0].results[0].error?.message?.substring\\(0,400\\)\\);console.log\\('---'\\);}\\);}\\)\")",
+      "Bash(grep -c \"test\\(\" /c/Users/Win11/source/repos/CodexIQ.Api/ui/exam-grader/e2e/*.spec.ts)"
     ]
   }
 }

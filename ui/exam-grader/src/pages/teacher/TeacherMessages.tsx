@@ -1,94 +1,171 @@
-import { useState, useRef, useEffect } from "react";
-import { Card, Typography, Input, Button, Avatar, List, Badge, Grid } from "antd";
-import { SendOutlined, PaperClipOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Card, Typography, Input, Button, Avatar, List, Badge, Grid, Spin, message as antMessage } from "antd";
+import { SendOutlined, PaperClipOutlined, ArrowLeftOutlined, WifiOutlined, DisconnectOutlined } from "@ant-design/icons";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
+import { messageApi } from "../../api/messageApi";
+import { useChatHub } from "../../hooks/useChatHub";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
-interface Message { id: number; from: "student" | "teacher"; text: string; time: string; }
-interface Student { id: number; name: string; no: string; lastMessage: string; lastTime: string; unread: number; avatar: string; }
-
-const mockStudents: Student[] = [
-  { id: 1, name: "Ali Veli", no: "2021001", lastMessage: "Teşekkür ederim hocam.", lastTime: "10:20", unread: 1, avatar: "AV" },
-  { id: 2, name: "Ayşe Kaya", no: "2021002", lastMessage: "Proje hakkında bir sorum var.", lastTime: "Dün", unread: 3, avatar: "AK" },
-  { id: 3, name: "Mehmet Demir", no: "2021003", lastMessage: "Anladım hocam, teşekkürler.", lastTime: "Paz", unread: 0, avatar: "MD" },
-  { id: 4, name: "Zeynep Yıldız", no: "2021004", lastMessage: "Quiz ne zaman olacak?", lastTime: "Cum", unread: 1, avatar: "ZY" },
-];
-
-const mockMessages: Record<number, Message[]> = {
-  1: [{ id: 1, from: "teacher", text: "Merhaba Ali, final sınavını değerlendirdim.", time: "10:15" }, { id: 2, from: "teacher", text: "Genel olarak iyi. Linked list kısmında birkaç hata var.", time: "10:16" }, { id: 3, from: "student", text: "Teşekkür ederim hocam.", time: "10:20" }],
-  2: [{ id: 1, from: "student", text: "Hocam proje hakkında bir sorum var. Veritabanı bağlantısı için hangi kütüphaneyi kullanmalıyız?", time: "Dün" }],
-  3: [{ id: 1, from: "teacher", text: "Ödevinizi kontrol ettim, daha dikkatli olmanız gerekiyor.", time: "Paz" }, { id: 2, from: "student", text: "Anladım hocam, teşekkürler.", time: "Paz" }],
-  4: [{ id: 1, from: "student", text: "Quiz ne zaman olacak?", time: "Cum" }],
-};
-
 const TeacherMessages = () => {
-  const [selected, setSelected] = useState<number | null>(1);
+  const [selected, setSelected] = useState<string | null>(null);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState(mockMessages);
+  const [students, setStudents] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [hubConnected, setHubConnected] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const selectedRef = useRef(selected);
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   const colors = useThemeColors();
   const tFunc = useT();
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [selected, messages]);
+  useEffect(() => { selectedRef.current = selected; }, [selected]);
 
-  const handleSend = () => {
+  const handleNewMessage = useCallback((msg: any) => {
+    const senderId = msg.senderId || msg.from;
+    if (selectedRef.current && (senderId === selectedRef.current || msg.receiverId === selectedRef.current)) {
+      setMessages((prev) => {
+        if (prev.some((m: any) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    }
+  }, []);
+
+  useChatHub({
+    activeUserId: selected,
+    onMessageReceived: handleNewMessage,
+    onConnectionChange: setHubConnected,
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await messageApi.getStudents();
+        const data = res.data || res;
+        setStudents(Array.isArray(data) ? data : []);
+      } catch { /* handled */ }
+      finally { setLoadingStudents(false); }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    if (!selected) return;
+    const load = async () => {
+      setLoadingMessages(true);
+      try {
+        const res = await messageApi.getConversation(selected);
+        const data = res.data || res;
+        setMessages(Array.isArray(data) ? data : []);
+      } catch { setMessages([]); }
+      finally { setLoadingMessages(false); }
+    };
+    load();
+  }, [selected]);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const handleSend = async () => {
     if (!input.trim() || !selected) return;
-    const msg: Message = { id: Date.now(), from: "teacher", text: input.trim(), time: new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) };
-    setMessages((p) => ({ ...p, [selected]: [...(p[selected] || []), msg] }));
-    setInput("");
+    setSending(true);
+    try {
+      await messageApi.sendMessage({ receiverId: selected, content: input.trim() });
+      setMessages((prev) => [...prev, { id: Date.now().toString(), senderId: "me", content: input.trim(), sentAt: new Date().toISOString(), from: "teacher" }]);
+      setInput("");
+    } catch (err: any) {
+      antMessage.error(err?.response?.data?.message || "Mesaj gönderilemedi");
+    } finally { setSending(false); }
   };
 
-  const current = mockStudents.find((s) => s.id === selected);
-  const currentMsgs = selected ? messages[selected] || [] : [];
+  const current = students.find((s: any) => (s.id || s.userId) === selected);
 
-  const listContent = (
-    <List dataSource={mockStudents} renderItem={(s) => (
-      <div onClick={() => setSelected(s.id)} style={{ padding: "14px 16px", cursor: "pointer", borderBottom: colors.listItemBorder, background: selected === s.id ? colors.listItemHoverBg : "transparent", borderLeft: selected === s.id ? `3px solid ${colors.accent}` : "3px solid transparent" }}>
-        <div style={{ display: "flex", gap: 12 }}>
-          <Avatar style={{ background: colors.accentBg, color: colors.accent, flexShrink: 0 }}>{s.avatar}</Avatar>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: 500 }} ellipsis>{s.name}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 11, flexShrink: 0 }}>{s.lastTime}</Text>
-            </div>
-            <Text style={{ color: colors.textMuted, fontSize: 11 }}>{s.no}</Text>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              <Text style={{ color: colors.textDimmed, fontSize: 12 }} ellipsis>{s.lastMessage}</Text>
-              {s.unread > 0 && <Badge count={s.unread} size="small" />}
+  const listContent = loadingStudents ? (
+    <div style={{ textAlign: "center", padding: 40 }}><Spin /></div>
+  ) : (
+    <List
+      dataSource={students}
+      locale={{ emptyText: "Öğrenci bulunamadı" }}
+      renderItem={(student: any) => {
+        const sid = student.id || student.userId;
+        const name = student.fullName || student.name || `${student.firstName || ""} ${student.lastName || ""}`;
+        const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2);
+        return (
+          <div onClick={() => setSelected(sid)} style={{
+            padding: "14px 16px", cursor: "pointer", borderBottom: colors.listItemBorder,
+            background: selected === sid ? colors.listItemHoverBg : "transparent",
+            borderLeft: selected === sid ? `3px solid ${colors.accent}` : "3px solid transparent",
+          }}>
+            <div style={{ display: "flex", gap: 12 }}>
+              <Avatar style={{ background: colors.accentBg, color: colors.accent, flexShrink: 0 }}>{initials}</Avatar>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: 500 }} ellipsis>{name}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 11, flexShrink: 0 }}>{student.lastMessageTime || ""}</Text>
+                </div>
+                <Text style={{ color: colors.textMuted, fontSize: 11 }}>{student.studentNo || student.no || ""}</Text>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                  <Text style={{ color: colors.textDimmed, fontSize: 12 }} ellipsis>{student.lastMessage || ""}</Text>
+                  {(student.unreadCount || 0) > 0 && <Badge count={student.unreadCount} size="small" />}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    )} />
+        );
+      }}
+    />
   );
 
   const chatContent = (
-    <Card style={{ flex: 1, background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, display: "flex", flexDirection: "column", overflow: "hidden" }} styles={{ body: { padding: 0, display: "flex", flexDirection: "column", height: "100%" } }}>
+    <Card style={{ flex: 1, background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, display: "flex", flexDirection: "column", overflow: "hidden" }}
+      styles={{ body: { padding: 0, display: "flex", flexDirection: "column", height: "100%" } }}>
       <div style={{ padding: "12px 16px", borderBottom: colors.borderSubtle, display: "flex", alignItems: "center", gap: 12 }}>
         {isMobile && <ArrowLeftOutlined onClick={() => setSelected(null)} style={{ color: colors.textSubtle, cursor: "pointer" }} />}
-        <Avatar style={{ background: colors.accentBg, color: colors.accent }}>{current?.avatar}</Avatar>
-        <div><Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: 500, display: "block" }}>{current?.name}</Text><Text style={{ color: colors.textMuted, fontSize: 12 }}>{current?.no}</Text></div>
+        <Avatar style={{ background: colors.accentBg, color: colors.accent }}>
+          {(current?.fullName || current?.name || "").split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+        </Avatar>
+        <div style={{ flex: 1 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: 500, display: "block" }}>{current?.fullName || current?.name}</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{current?.studentNo || current?.no || ""}</Text>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {hubConnected ? <WifiOutlined style={{ color: "#52c41a", fontSize: 12 }} /> : <DisconnectOutlined style={{ color: colors.textDimmed, fontSize: 12 }} />}
+          <Text style={{ color: hubConnected ? "#52c41a" : colors.textDimmed, fontSize: 10 }}>{hubConnected ? "Live" : "Offline"}</Text>
+        </div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-        {currentMsgs.map((msg) => (
-          <div key={msg.id} style={{ display: "flex", justifyContent: msg.from === "teacher" ? "flex-end" : "flex-start" }}>
-            <div style={{ maxWidth: isMobile ? "85%" : "70%", padding: "10px 14px", borderRadius: msg.from === "teacher" ? "12px 12px 4px 12px" : "12px 12px 12px 4px", background: msg.from === "teacher" ? colors.messageSentBg : colors.messageReceivedBg, border: `1px solid ${msg.from === "teacher" ? colors.messageSentBorder : colors.messageReceivedBorder}` }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{msg.text}</Text>
-              <Text style={{ color: colors.textDimmed, fontSize: 10, display: "block", marginTop: 4, textAlign: "right" }}>{msg.time}</Text>
-            </div>
-          </div>
-        ))}
+        {loadingMessages ? <div style={{ textAlign: "center", padding: 40 }}><Spin /></div> :
+          messages.map((msg: any) => {
+            const isMe = msg.from === "teacher" || msg.senderId === "me" || msg.isMine;
+            return (
+              <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                <div style={{
+                  maxWidth: isMobile ? "85%" : "70%", padding: "10px 14px",
+                  borderRadius: isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
+                  background: isMe ? colors.messageSentBg : colors.messageReceivedBg,
+                  border: `1px solid ${isMe ? colors.messageSentBorder : colors.messageReceivedBorder}`,
+                }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{msg.content || msg.text}</Text>
+                  <Text style={{ color: colors.textDimmed, fontSize: 10, display: "block", marginTop: 4, textAlign: "right" }}>
+                    {msg.sentAt ? new Date(msg.sentAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : msg.time}
+                  </Text>
+                </div>
+              </div>
+            );
+          })}
         <div ref={endRef} />
       </div>
       <div style={{ padding: 12, borderTop: colors.borderSubtle, display: "flex", gap: 8 }}>
         <Button type="text" icon={<PaperClipOutlined />} style={{ color: colors.textMuted }} />
-        <Input value={input} onChange={(e) => setInput(e.target.value)} onPressEnter={handleSend} placeholder={tFunc("typeMessage")} style={{ flex: 1, background: colors.inputBg, borderColor: colors.accentBorderSolid, borderRadius: 8 }} />
-        <Button type="primary" icon={<SendOutlined />} onClick={handleSend} disabled={!input.trim()} style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none" }} />
+        <Input value={input} onChange={(e) => setInput(e.target.value)} onPressEnter={handleSend} placeholder={tFunc("typeMessage")}
+          style={{ flex: 1, background: colors.inputBg, borderColor: colors.accentBorderSolid, borderRadius: 8 }} />
+        <Button type="primary" icon={<SendOutlined />} onClick={handleSend} disabled={!input.trim()} loading={sending}
+          style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none" }} />
       </div>
     </Card>
   );
@@ -101,13 +178,21 @@ const TeacherMessages = () => {
       </div>
       {!isMobile ? (
         <div style={{ display: "flex", gap: 16, height: "calc(100vh - 180px)", minHeight: 500 }}>
-          <Card style={{ width: 300, flexShrink: 0, background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, overflow: "hidden" }} styles={{ body: { padding: 0, height: "100%", overflowY: "auto" } }}>{listContent}</Card>
-          {chatContent}
+          <Card style={{ width: 300, flexShrink: 0, background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, overflow: "hidden" }}
+            styles={{ body: { padding: 0, height: "100%", overflowY: "auto" } }}>{listContent}</Card>
+          {selected ? chatContent : (
+            <Card style={{ flex: 1, background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: colors.textMuted }}>{tFunc("selectConversation") || "Bir sohbet seçin"}</Text>
+            </Card>
+          )}
         </div>
       ) : (
         <div style={{ height: "calc(100vh - 160px)", minHeight: 400 }}>
-          {!selected ? <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }} styles={{ body: { padding: 0 } }}>{listContent}</Card>
-            : <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>{chatContent}</div>}
+          {!selected ? (
+            <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }} styles={{ body: { padding: 0 } }}>{listContent}</Card>
+          ) : (
+            <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>{chatContent}</div>
+          )}
         </div>
       )}
     </div>

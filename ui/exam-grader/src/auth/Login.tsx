@@ -18,7 +18,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const colors = useThemeColors();
   const t = useT();
-  const theme = useAppStore((s) => s.theme);
   const navigate = useNavigate();
   const setAuth = useAppStore((s) => s.setAuth);
 

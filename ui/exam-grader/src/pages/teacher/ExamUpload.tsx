@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { Card, Typography, Upload, Button, Input, Select, Row, Col, Form, Tag, message, Progress, Steps, Divider, InputNumber, Space, Switch } from "antd";
+import { useState, useEffect } from "react";
+import { Card, Typography, Upload, Button, Input, Select, Row, Col, Form, Tag, message, Progress, Steps, Space, Switch, InputNumber } from "antd";
 import { CloudUploadOutlined, DeleteOutlined, PlusOutlined, MinusCircleOutlined, SendOutlined, FileImageOutlined, CheckCircleOutlined, CodeOutlined, TrophyOutlined, BookOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
+import { teacherApi } from "../../api/teacherApi";
+import { adminApi } from "../../api/adminApi";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -16,10 +19,10 @@ const languages = [
 ];
 
 const ExamUpload = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [fileList, setFileList] = useState<any[]>([]);
   const [language, setLanguage] = useState<string>("c");
-  const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [examName, setExamName] = useState("");
   const [codePurpose, setCodePurpose] = useState("");
@@ -27,48 +30,68 @@ const ExamUpload = () => {
   const [rubricItems, setRubricItems] = useState<RubricItem[]>([{ id: 1, criteria: "", points: 0 }]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [courses, setCourses] = useState<any[]>([]);
   const colors = useThemeColors();
   const t = useT();
 
-  const classes = [
-    { value: "cs101-a", label: "Bilgisayar Müh. 1-A" },
-    { value: "cs101-b", label: "Bilgisayar Müh. 1-B" },
-    { value: "cs201-a", label: "Bilgisayar Müh. 2-A" },
-    { value: "cs301-a", label: "Bilgisayar Müh. 3-A" },
-  ];
-
-  const courses = [
-    { value: "veri-yapilari", label: "Veri Yapıları" },
-    { value: "algoritma", label: "Algoritma Analizi" },
-    { value: "oop", label: "Nesne Yönelimli Programlama" },
-    { value: "c-programlama", label: "C Programlama" },
-    { value: "veritabani", label: "Veritabanı Yönetimi" },
-  ];
+  useEffect(() => {
+    const loadCourses = async () => {
+      try {
+        const res = await adminApi.getCourses({ pageSize: 100 });
+        const data = res.data || res;
+        const items = data.items || data.results || (Array.isArray(data) ? data : []);
+        setCourses(items.map((c: any) => ({ value: c.id, label: c.name })));
+      } catch { /* use empty */ }
+    };
+    loadCourses();
+  }, []);
 
   const totalRubricPoints = rubricItems.reduce((sum, item) => sum + item.points, 0);
-
   const addRubricItem = () => setRubricItems([...rubricItems, { id: Date.now(), criteria: "", points: 0 }]);
   const removeRubricItem = (id: number) => { if (rubricItems.length > 1) setRubricItems(rubricItems.filter((i) => i.id !== id)); };
   const updateRubricItem = (id: number, field: "criteria" | "points", value: string | number) => {
     setRubricItems(rubricItems.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (fileList.length === 0) { message.error(t("uploadFiles")); return; }
     if (!examName) { message.error(t("enterExamName")); return; }
-    if (!selectedClass) { message.error(t("selectClass")); return; }
     if (!selectedCourse) { message.error(t("selectCourse")); return; }
+
     setUploading(true);
     setCurrentStep(2);
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15;
-      if (progress >= 100) {
-        progress = 100; clearInterval(interval);
-        setTimeout(() => { setUploading(false); setCurrentStep(3); message.success(t("uploadSuccessMessage")); }, 500);
+    setUploadProgress(10);
+
+    try {
+      // Step 1: Create exam
+      const examRes = await teacherApi.createExam({ name: examName, courseId: selectedCourse, language, codePurpose });
+      const examData = examRes.data || examRes;
+      const examId = examData.examId || examData.id;
+      setUploadProgress(30);
+
+      // Step 2: Upload papers
+      const files = fileList.map((f: any) => f.originFileObj).filter(Boolean);
+      if (files.length > 0) {
+        await teacherApi.uploadPapers(examId, files);
       }
-      setUploadProgress(Math.round(progress));
-    }, 400);
+      setUploadProgress(60);
+
+      // Step 3: Save rubric if enabled
+      if (useRubric && rubricItems.some((r) => r.criteria)) {
+        await teacherApi.saveRubric(examId, rubricItems.map((r) => ({ criteria: r.criteria, maxPoints: r.points })));
+      }
+      setUploadProgress(80);
+
+      // Step 4: Start evaluation
+      await teacherApi.startEvaluation(examId);
+      setUploadProgress(100);
+
+      setTimeout(() => { setUploading(false); setCurrentStep(3); message.success(t("uploadSuccessMessage")); }, 500);
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Yükleme sırasında hata oluştu");
+      setUploading(false);
+      setCurrentStep(1);
+    }
   };
 
   const stepItems = [
@@ -89,7 +112,6 @@ const ExamUpload = () => {
         <Steps current={currentStep} items={stepItems} size="small" />
       </Card>
 
-      {/* Step 0: Files */}
       {currentStep === 0 && (
         <Card title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>{t("uploadExamPapers")}</span>} style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }}>
           <Dragger multiple accept="image/*" fileList={fileList} onChange={(info) => setFileList(info.fileList)} beforeUpload={() => false} listType="picture"
@@ -107,7 +129,6 @@ const ExamUpload = () => {
         </Card>
       )}
 
-      {/* Step 1: Settings */}
       {currentStep === 1 && (
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
@@ -116,43 +137,29 @@ const ExamUpload = () => {
                 <Form.Item label={<Text style={{ color: colors.textSubtle }}>{t("examName")}</Text>}>
                   <Input placeholder={t("examNamePlaceholder")} value={examName} onChange={(e) => setExamName(e.target.value)} />
                 </Form.Item>
-                <Row gutter={12}>
-                  <Col span={12}>
-                    <Form.Item label={<Text style={{ color: colors.textSubtle }}>{t("course")}</Text>}>
-                      <Select placeholder={t("selectCourse")} options={courses} value={selectedCourse} onChange={setSelectedCourse} />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item label={<Text style={{ color: colors.textSubtle }}>{t("class")}</Text>}>
-                      <Select placeholder={t("selectClass")} options={classes} value={selectedClass} onChange={setSelectedClass} />
-                    </Form.Item>
-                  </Col>
-                </Row>
+                <Form.Item label={<Text style={{ color: colors.textSubtle }}>{t("course")}</Text>}>
+                  <Select placeholder={t("selectCourse")} options={courses} value={selectedCourse} onChange={setSelectedCourse} />
+                </Form.Item>
                 <Form.Item label={<Text style={{ color: colors.textSubtle }}>{t("programmingLanguage")}</Text>}>
                   <Select options={languages} value={language} onChange={setLanguage} />
                 </Form.Item>
                 <Form.Item label={<Text style={{ color: colors.textSubtle }}>{t("codePurpose")}</Text>}>
-                  <TextArea rows={4} placeholder={t("codePurposePlaceholder")} value={codePurpose} onChange={(e) => setCodePurpose(e.target.value)} style={{ fontFamily: "'DM Sans', sans-serif" }} />
+                  <TextArea rows={4} placeholder={t("codePurposePlaceholder")} value={codePurpose} onChange={(e) => setCodePurpose(e.target.value)} />
                 </Form.Item>
               </Form>
             </Card>
           </Col>
-
           <Col xs={24} lg={12}>
-            <Card
-              title={
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}><TrophyOutlined style={{ marginRight: 8, color: "#faad14" }} />{t("answerKeyRubric")}</span>
-                  <Switch checked={useRubric} onChange={setUseRubric} checkedChildren={t("active")} unCheckedChildren={t("off")} />
-                </div>
-              }
-              style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }}
-            >
+            <Card title={
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}><TrophyOutlined style={{ marginRight: 8, color: "#faad14" }} />{t("answerKeyRubric")}</span>
+                <Switch checked={useRubric} onChange={setUseRubric} checkedChildren={t("active")} unCheckedChildren={t("off")} />
+              </div>
+            } style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }}>
               {!useRubric ? (
                 <div style={{ textAlign: "center", padding: "30px 0" }}>
                   <BookOutlined style={{ fontSize: 36, color: colors.textDimmed }} />
                   <Text style={{ display: "block", color: colors.textMuted, marginTop: 12, fontSize: 13 }}>{t("optionalRubric")}</Text>
-                  <Text style={{ display: "block", color: colors.textDimmed, fontSize: 12, marginTop: 4 }}>{t("aiUsesRubricToEvaluate")}</Text>
                 </div>
               ) : (
                 <div>
@@ -167,13 +174,10 @@ const ExamUpload = () => {
                       <Tag style={{ borderRadius: 6, marginTop: 4 }}>{index + 1}</Tag>
                       <Input placeholder={t("criteriaDescription")} value={item.criteria} onChange={(e) => updateRubricItem(item.id, "criteria", e.target.value)} style={{ flex: 1 }} />
                       <InputNumber min={0} max={100} value={item.points} onChange={(val) => updateRubricItem(item.id, "points", val || 0)} style={{ width: 80 }} addonAfter="p" />
-                      <Button type="text" danger icon={<MinusCircleOutlined />} onClick={() => removeRubricItem(item.id)} disabled={rubricItems.length <= 1} style={{ marginTop: 2 }} />
+                      <Button type="text" danger icon={<MinusCircleOutlined />} onClick={() => removeRubricItem(item.id)} disabled={rubricItems.length <= 1} />
                     </div>
                   ))}
                   <Button type="dashed" onClick={addRubricItem} icon={<PlusOutlined />} block style={{ marginTop: 8, borderColor: colors.accentBorder, color: colors.accent }}>{t("addCriteria")}</Button>
-                  {totalRubricPoints !== 100 && totalRubricPoints > 0 && (
-                    <Text style={{ color: "#faad14", fontSize: 12, display: "block", marginTop: 8 }}>⚠ {t("totalPointsMustBe100")} ({t("current")}: {totalRubricPoints})</Text>
-                  )}
                 </div>
               )}
             </Card>
@@ -187,7 +191,6 @@ const ExamUpload = () => {
         </Row>
       )}
 
-      {/* Step 2: Uploading */}
       {currentStep === 2 && (
         <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, textAlign: "center", padding: "40px 0" }}>
           <CloudUploadOutlined style={{ fontSize: 48, color: colors.accent, marginBottom: 20 }} />
@@ -196,11 +199,9 @@ const ExamUpload = () => {
           <div style={{ maxWidth: 400, margin: "0 auto" }}>
             <Progress percent={uploadProgress} strokeColor={{ from: "#00b8d4", to: "#00e5ff" }} trailColor={colors.dividerColor} />
           </div>
-          <Text style={{ color: colors.textDimmed, fontSize: 12, display: "block", marginTop: 12 }}>{t("addingToQueue")}</Text>
         </Card>
       )}
 
-      {/* Step 3: Complete */}
       {currentStep === 3 && (
         <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, textAlign: "center", padding: "40px 0" }}>
           <CheckCircleOutlined style={{ fontSize: 56, color: "#52c41a", marginBottom: 20 }} />
@@ -208,7 +209,7 @@ const ExamUpload = () => {
           <Paragraph style={{ color: colors.textMuted, maxWidth: 400, margin: "0 auto 24px" }}>{t("uploadCompleteMessage").replace("{count}", String(fileList.length))}</Paragraph>
           <Space size="middle">
             <Button onClick={() => { setCurrentStep(0); setFileList([]); setUploadProgress(0); }}>{t("newUpload")}</Button>
-            <Button type="primary" style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none" }}>{t("goToResults")}</Button>
+            <Button type="primary" onClick={() => navigate("/teacher/results")} style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none" }}>{t("goToResults")}</Button>
           </Space>
         </Card>
       )}

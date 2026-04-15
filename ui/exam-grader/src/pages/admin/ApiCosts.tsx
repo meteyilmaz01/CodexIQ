@@ -1,43 +1,47 @@
-import { Card, Row, Col, Typography, Tag, Table, Progress } from "antd";
-import { DollarOutlined, ArrowUpOutlined, ArrowDownOutlined, WarningOutlined } from "@ant-design/icons";
+import { useEffect, useState } from "react";
+import { Card, Row, Col, Typography, Tag, Table, Progress, Spin } from "antd";
+import { ArrowDownOutlined, WarningOutlined } from "@ant-design/icons";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
+import { adminApi } from "../../api/adminApi";
 
 const { Title, Text } = Typography;
-
-const modelStats = [
-  { model: "Gemini 2.5 Flash", dailyCalls: 245, dailyCost: 2.12, monthlyCost: 58.40, limit: 100, used: 58.4, color: "#1890ff" },
-  { model: "Llama 3.1 8B", dailyCalls: 189, dailyCost: 0.95, monthlyCost: 26.10, limit: 50, used: 26.1, color: "#52c41a" },
-  { model: "DeepSeek", dailyCalls: 201, dailyCost: 1.05, monthlyCost: 28.90, limit: 50, used: 28.9, color: "#722ed1" },
-  { model: "Vision LLM (OCR)", dailyCalls: 87, dailyCost: 0.70, monthlyCost: 19.25, limit: 40, used: 19.25, color: "#0ff" },
-];
-
-const dailyHistory = [
-  { date: "2026-04-07", gemini: 2.12, llama: 0.95, deepseek: 1.05, vision: 0.70, total: 4.82 },
-  { date: "2026-04-06", gemini: 2.45, llama: 1.10, deepseek: 0.98, vision: 0.82, total: 5.35 },
-  { date: "2026-04-05", gemini: 1.89, llama: 0.78, deepseek: 1.22, vision: 0.55, total: 4.44 },
-  { date: "2026-04-04", gemini: 2.67, llama: 1.25, deepseek: 0.85, vision: 0.90, total: 5.67 },
-  { date: "2026-04-03", gemini: 1.55, llama: 0.65, deepseek: 0.72, vision: 0.42, total: 3.34 },
-  { date: "2026-04-02", gemini: 2.10, llama: 0.88, deepseek: 1.15, vision: 0.68, total: 4.81 },
-  { date: "2026-04-01", gemini: 1.95, llama: 0.92, deepseek: 0.90, vision: 0.60, total: 4.37 },
-];
-
-const totalMonthly = modelStats.reduce((s, m) => s + m.monthlyCost, 0);
-const totalDaily = modelStats.reduce((s, m) => s + m.dailyCost, 0);
-const totalLimit = modelStats.reduce((s, m) => s + m.limit, 0);
 
 const ApiCosts = () => {
   const colors = useThemeColors();
   const t = useT();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await adminApi.getApiCosts();
+        setData(res.data || res);
+      } catch { /* handled */ }
+      finally { setLoading(false); }
+    };
+    load();
+  }, []);
+
+  if (loading) return <div style={{ textAlign: "center", padding: 80 }}><Spin size="large" /></div>;
+
+  const modelStats = data?.models || data?.modelStats || [];
+  const dailyHistory = data?.dailyHistory || data?.history || [];
+  const totalMonthly = data?.totalMonthlyCost ?? modelStats.reduce((s: number, m: any) => s + (m.monthlyCost || 0), 0);
+  const totalDaily = data?.totalDailyCost ?? modelStats.reduce((s: number, m: any) => s + (m.dailyCost || 0), 0);
+  const totalLimit = data?.totalLimit ?? modelStats.reduce((s: number, m: any) => s + (m.limit || 0), 0);
 
   const historyColumns = [
     { title: t("date"), dataIndex: "date", key: "date", render: (d: string) => <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: "'JetBrains Mono'" }}>{d}</Text> },
-    { title: "Gemini", dataIndex: "gemini", key: "gemini", render: (v: number) => <Text style={{ color: "#1890ff", fontFamily: "'JetBrains Mono'", fontSize: 13 }}>${v.toFixed(2)}</Text> },
-    { title: "Llama", dataIndex: "llama", key: "llama", responsive: ["md" as const], render: (v: number) => <Text style={{ color: "#52c41a", fontFamily: "'JetBrains Mono'", fontSize: 13 }}>${v.toFixed(2)}</Text> },
-    { title: "DeepSeek", dataIndex: "deepseek", key: "deepseek", responsive: ["md" as const], render: (v: number) => <Text style={{ color: "#722ed1", fontFamily: "'JetBrains Mono'", fontSize: 13 }}>${v.toFixed(2)}</Text> },
-    { title: "Vision", dataIndex: "vision", key: "vision", responsive: ["lg" as const], render: (v: number) => <Text style={{ color: colors.accent, fontFamily: "'JetBrains Mono'", fontSize: 13 }}>${v.toFixed(2)}</Text> },
-    { title: t("total"), dataIndex: "total", key: "total", render: (v: number) => <Text style={{ color: "#faad14", fontFamily: "'JetBrains Mono'", fontSize: 13, fontWeight: 600 }}>${v.toFixed(2)}</Text> },
+    { title: "Gemini", dataIndex: "gemini", key: "gemini", render: (v: number) => <Text style={{ color: "#1890ff", fontFamily: "'JetBrains Mono'", fontSize: 13 }}>${(v || 0).toFixed(2)}</Text> },
+    { title: "Llama", dataIndex: "llama", key: "llama", responsive: ["md" as const], render: (v: number) => <Text style={{ color: "#52c41a", fontFamily: "'JetBrains Mono'", fontSize: 13 }}>${(v || 0).toFixed(2)}</Text> },
+    { title: "DeepSeek", dataIndex: "deepseek", key: "deepseek", responsive: ["md" as const], render: (v: number) => <Text style={{ color: "#722ed1", fontFamily: "'JetBrains Mono'", fontSize: 13 }}>${(v || 0).toFixed(2)}</Text> },
+    { title: "Vision", dataIndex: "vision", key: "vision", responsive: ["lg" as const], render: (v: number) => <Text style={{ color: colors.accent, fontFamily: "'JetBrains Mono'", fontSize: 13 }}>${(v || 0).toFixed(2)}</Text> },
+    { title: t("total"), dataIndex: "total", key: "total", render: (v: number) => <Text style={{ color: "#faad14", fontFamily: "'JetBrains Mono'", fontSize: 13, fontWeight: 600 }}>${(v || 0).toFixed(2)}</Text> },
   ];
+
+  const modelColors = ["#1890ff", "#52c41a", "#722ed1", "#0ff", "#faad14", "#ff4d4f"];
 
   return (
     <div>
@@ -48,10 +52,10 @@ const ApiCosts = () => {
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         {[
-          { label: t("today"), value: `$${totalDaily.toFixed(2)}`, color: "#faad14", extra: <><ArrowDownOutlined style={{ color: "#52c41a", fontSize: 11 }} /> <Text style={{ color: "#52c41a", fontSize: 12 }}>-10%</Text></> },
-          { label: t("thisMonth"), value: `$${totalMonthly.toFixed(2)}`, color: "#ff4d4f", extra: <Text style={{ color: colors.textMuted, fontSize: 12 }}>/ ${totalLimit} limit</Text> },
-          { label: t("dailyAvg"), value: `$${(totalMonthly / 7).toFixed(2)}`, color: colors.accent, extra: null },
-          { label: t("budgetUsage"), value: `%${Math.round((totalMonthly / totalLimit) * 100)}`, color: totalMonthly / totalLimit > 0.8 ? "#ff4d4f" : "#52c41a", extra: null },
+          { label: t("today"), value: `$${totalDaily.toFixed(2)}`, color: "#faad14", extra: data?.costTrend ? <><ArrowDownOutlined style={{ color: "#52c41a", fontSize: 11 }} /> <Text style={{ color: "#52c41a", fontSize: 12 }}>{data.costTrend}</Text></> : null },
+          { label: t("thisMonth"), value: `$${totalMonthly.toFixed(2)}`, color: "#ff4d4f", extra: totalLimit > 0 ? <Text style={{ color: colors.textMuted, fontSize: 12 }}>/ ${totalLimit} limit</Text> : null },
+          { label: t("dailyAvg"), value: `$${dailyHistory.length > 0 ? (totalMonthly / dailyHistory.length).toFixed(2) : totalDaily.toFixed(2)}`, color: colors.accent, extra: null },
+          { label: t("budgetUsage"), value: totalLimit > 0 ? `%${Math.round((totalMonthly / totalLimit) * 100)}` : "-", color: totalLimit > 0 && totalMonthly / totalLimit > 0.8 ? "#ff4d4f" : "#52c41a", extra: null },
         ].map((item, i) => (
           <Col xs={12} md={6} key={i}>
             <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }} styles={{ body: { padding: 16, textAlign: "center" as const } }}>
@@ -66,20 +70,24 @@ const ApiCosts = () => {
       <Row gutter={[16, 16]}>
         <Col xs={24} md={10}>
           <Card title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>{t("modelBasedCost")}</span>} style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16 }}>
-            {modelStats.map((m, i) => (
-              <div key={i} style={{ marginBottom: i < modelStats.length - 1 ? 20 : 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 10, height: 10, borderRadius: 3, background: m.color }} /><Text style={{ color: colors.textSecondary, fontSize: 13 }}>{m.model}</Text></div>
-                  <Text style={{ color: m.color, fontFamily: "'JetBrains Mono'", fontSize: 13, fontWeight: 600 }}>${m.monthlyCost.toFixed(2)}</Text>
+            {modelStats.map((m: any, i: number) => {
+              const color = m.color || modelColors[i % modelColors.length];
+              return (
+                <div key={i} style={{ marginBottom: i < modelStats.length - 1 ? 20 : 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 10, height: 10, borderRadius: 3, background: color }} /><Text style={{ color: colors.textSecondary, fontSize: 13 }}>{m.model || m.name}</Text></div>
+                    <Text style={{ color: color, fontFamily: "'JetBrains Mono'", fontSize: 13, fontWeight: 600 }}>${(m.monthlyCost || 0).toFixed(2)}</Text>
+                  </div>
+                  <Progress percent={m.limit > 0 ? Math.round(((m.used || m.monthlyCost || 0) / m.limit) * 100) : 0} showInfo={false} strokeColor={color} trailColor={colors.dividerColor} size="small" />
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                    <Text style={{ color: colors.textDimmed, fontSize: 11 }}>{m.dailyCalls || 0} {t("callsPerDay")} • ${(m.dailyCost || 0).toFixed(2)}/{t("day")}</Text>
+                    <Text style={{ color: colors.textDimmed, fontSize: 11 }}>${(m.used || m.monthlyCost || 0).toFixed(2)} / ${m.limit || 0}</Text>
+                  </div>
+                  {m.limit > 0 && (m.used || m.monthlyCost || 0) / m.limit > 0.8 && <div style={{ marginTop: 4 }}><Tag color="warning" style={{ borderRadius: 4, fontSize: 10 }}><WarningOutlined /> {t("approachingLimit")}</Tag></div>}
                 </div>
-                <Progress percent={Math.round((m.used / m.limit) * 100)} showInfo={false} strokeColor={m.color} trailColor={colors.dividerColor} size="small" />
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                  <Text style={{ color: colors.textDimmed, fontSize: 11 }}>{m.dailyCalls} {t("callsPerDay")} • ${m.dailyCost.toFixed(2)}/{t("day")}</Text>
-                  <Text style={{ color: colors.textDimmed, fontSize: 11 }}>${m.used.toFixed(2)} / ${m.limit}</Text>
-                </div>
-                {m.used / m.limit > 0.8 && <div style={{ marginTop: 4 }}><Tag color="warning" style={{ borderRadius: 4, fontSize: 10 }}><WarningOutlined /> {t("approachingLimit")}</Tag></div>}
-              </div>
-            ))}
+              );
+            })}
+            {modelStats.length === 0 && <Text style={{ color: colors.textMuted }}>{t("noData") || "Veri yok"}</Text>}
           </Card>
         </Col>
         <Col xs={24} md={14}>

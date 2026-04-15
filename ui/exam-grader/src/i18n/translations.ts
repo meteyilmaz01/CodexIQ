@@ -379,6 +379,8 @@ const translations = {
     progress: "İlerleme",
     model: "Model",
     startTime: "Başlangıç",
+    noData: "Veri yok",
+    selectConversation: "Bir sohbet seçin",
   },
 
   en: {
@@ -761,6 +763,8 @@ const translations = {
     progress: "Progress",
     model: "Model",
     startTime: "Start Time",
+    noData: "No data",
+    selectConversation: "Select a conversation",
   },
 } as const;
 

@@ -1,103 +1,107 @@
-import { useState } from "react";
-import { Card, Table, Tag, Input, Select, Typography, Button, Row, Col, Space, Dropdown, Tooltip, message } from "antd";
-import { SearchOutlined, EyeOutlined, FilterOutlined, DownloadOutlined, ShareAltOutlined, FileExcelOutlined, FilePdfOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import { Card, Table, Tag, Input, Select, Typography, Button, Space, Dropdown, Tooltip, message } from "antd";
+import { SearchOutlined, EyeOutlined, DownloadOutlined, ShareAltOutlined, FileExcelOutlined, FilePdfOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
+import { teacherApi } from "../../api/teacherApi";
 
 const { Title, Text } = Typography;
-
-const mockResults = [
-  { id: 1, studentName: "Ali Veli", studentNo: "2021001", exam: "Veri Yapıları - Final", course: "Veri Yapıları", date: "2026-03-28", score: 85, syntaxErrors: 2, logicErrors: 1, shared: true, overridden: false },
-  { id: 2, studentName: "Ayşe Kaya", studentNo: "2021002", exam: "Veri Yapıları - Final", course: "Veri Yapıları", date: "2026-03-28", score: 92, syntaxErrors: 0, logicErrors: 1, shared: true, overridden: false },
-  { id: 3, studentName: "Mehmet Demir", studentNo: "2021003", exam: "Veri Yapıları - Final", course: "Veri Yapıları", date: "2026-03-28", score: 58, syntaxErrors: 6, logicErrors: 4, shared: false, overridden: false },
-  { id: 4, studentName: "Zeynep Yıldız", studentNo: "2021004", exam: "Algoritma - Quiz 4", course: "Algoritma", date: "2026-03-15", score: 72, syntaxErrors: 3, logicErrors: 2, shared: false, overridden: true },
-  { id: 5, studentName: "Can Özkan", studentNo: "2021005", exam: "Algoritma - Quiz 4", course: "Algoritma", date: "2026-03-15", score: 45, syntaxErrors: 8, logicErrors: 5, shared: false, overridden: false },
-  { id: 6, studentName: "Elif Arslan", studentNo: "2021006", exam: "OOP - Ödev 3", course: "OOP", date: "2026-03-05", score: 90, syntaxErrors: 1, logicErrors: 0, shared: true, overridden: false },
-  { id: 7, studentName: "Burak Çelik", studentNo: "2021007", exam: "OOP - Ödev 3", course: "OOP", date: "2026-03-05", score: 78, syntaxErrors: 2, logicErrors: 2, shared: true, overridden: true },
-  { id: 8, studentName: "Selin Koç", studentNo: "2021008", exam: "C Programlama - Vize", course: "C Programlama", date: "2026-02-10", score: 63, syntaxErrors: 5, logicErrors: 3, shared: false, overridden: false },
-];
 
 const TeacherResults = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState<string | null>(null);
   const [examFilter, setExamFilter] = useState<string | null>(null);
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const colors = useThemeColors();
   const t = useT();
 
-  const getScoreColor = (score: number) => { if (score >= 85) return "#52c41a"; if (score >= 70) return colors.accent; if (score >= 50) return "#faad14"; return "#ff4d4f"; };
-
-  const filtered = mockResults.filter((r) => {
-    const matchSearch = r.studentName.toLowerCase().includes(search.toLowerCase()) || r.studentNo.includes(search);
-    const matchCourse = !courseFilter || r.course === courseFilter;
-    const matchExam = !examFilter || r.exam === examFilter;
-    return matchSearch && matchCourse && matchExam;
-  });
-
-  const coursesList = [...new Set(mockResults.map((r) => r.course))];
-  const exams = [...new Set(mockResults.map((r) => r.exam))];
-
-  const handleBulkShare = () => { message.success(`${selectedRows.length} ${t("resultsShared")}`); setSelectedRows([]); };
-  const handleExport = (type: string) => { message.success(`${type.toUpperCase()} ${t("downloading")}...`); };
-
-  const exportItems = {
-    items: [
-      { key: "excel", icon: <FileExcelOutlined />, label: `Excel ${t("download")}`, onClick: () => handleExport("excel") },
-      { key: "pdf", icon: <FilePdfOutlined />, label: `PDF ${t("download")}`, onClick: () => handleExport("pdf") },
-    ],
+  const fetchResults = async (page = 1, pageSize = 10) => {
+    setLoading(true);
+    try {
+      const res = await teacherApi.getResults({ search: search || undefined, course: courseFilter || undefined, exam: examFilter || undefined, page, pageSize });
+      const data = res.data || res;
+      if (Array.isArray(data)) { setResults(data); setPagination({ current: page, pageSize, total: data.length }); }
+      else { setResults(data.items || data.results || []); setPagination({ current: page, pageSize, total: data.totalCount || data.total || 0 }); }
+    } catch { setResults([]); } finally { setLoading(false); }
   };
 
+  useEffect(() => { fetchResults(); }, []);
+  useEffect(() => { const timer = setTimeout(() => fetchResults(1), 500); return () => clearTimeout(timer); }, [search, courseFilter, examFilter]);
+
+  const getScoreColor = (s: number) => { if (s >= 85) return "#52c41a"; if (s >= 70) return colors.accent; if (s >= 50) return "#faad14"; return "#ff4d4f"; };
+
+  const handleBulkShare = async () => {
+    try { await teacherApi.bulkShare(selectedRows); message.success(`${selectedRows.length} ${t("resultsShared")}`); setSelectedRows([]); fetchResults(pagination.current, pagination.pageSize); }
+    catch (err: any) { message.error(err?.response?.data?.message || "Hata"); }
+  };
+
+  const handleExport = async (type: string) => {
+    try {
+      const res = type === "excel" ? await teacherApi.exportExcel(examFilter || "") : await teacherApi.exportPdf(examFilter || "");
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a"); link.href = url; link.download = `results.${type === "excel" ? "csv" : "pdf"}`; link.click();
+      message.success(`${type.toUpperCase()} ${t("downloading")}...`);
+    } catch { message.error("Export hatası"); }
+  };
+
+  const coursesList = [...new Set(results.map((r: any) => r.course || r.courseName).filter(Boolean))];
+  const exams = [...new Set(results.map((r: any) => r.exam || r.examName).filter(Boolean))];
+
   const columns = [
-    { title: t("student"), key: "student", render: (_: unknown, record: (typeof mockResults)[0]) => (
-      <div><Text style={{ color: colors.textSecondary, fontSize: 14, display: "block" }}>{record.studentName}</Text><Text style={{ color: colors.textMuted, fontSize: 12 }}>{record.studentNo}</Text></div>
+    { title: t("student"), key: "student", render: (_: unknown, r: any) => (
+      <div><Text style={{ color: colors.textSecondary, fontSize: 14, display: "block" }}>{r.studentName}</Text><Text style={{ color: colors.textMuted, fontSize: 12 }}>{r.studentNo}</Text></div>
     )},
-    { title: t("exam"), dataIndex: "exam", key: "exam", responsive: ["lg" as const], render: (text: string) => <Text style={{ color: colors.textSubtle, fontSize: 13 }}>{text}</Text> },
-    { title: t("score"), dataIndex: "score", key: "score", sorter: (a: any, b: any) => a.score - b.score, render: (score: number, record: any) => (
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontSize: 20, fontWeight: 700, color: getScoreColor(score), fontFamily: "'JetBrains Mono'" }}>{score}</span>
-        {record.overridden && <Tooltip title={t("manualOverride")}><Tag color="orange" style={{ borderRadius: 4, fontSize: 10 }}>OVR</Tag></Tooltip>}
-      </div>
+    { title: t("exam"), key: "exam", responsive: ["lg" as const], render: (_: unknown, r: any) => <Text style={{ color: colors.textSubtle, fontSize: 13 }}>{r.exam || r.examName}</Text> },
+    { title: t("score"), key: "score", sorter: (a: any, b: any) => (a.score || a.totalScore || 0) - (b.score || b.totalScore || 0), render: (_: unknown, r: any) => {
+      const score = r.score || r.totalScore || 0;
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 20, fontWeight: 700, color: getScoreColor(score), fontFamily: "'JetBrains Mono'" }}>{score}</span>
+          {r.overridden && <Tooltip title={t("manualOverride")}><Tag color="orange" style={{ borderRadius: 4, fontSize: 10 }}>OVR</Tag></Tooltip>}
+        </div>
+      );
+    }},
+    { title: t("errorsTitle"), key: "errors", responsive: ["md" as const], render: (_: unknown, r: any) => (
+      <Space size={4}><Tag color={(r.syntaxErrors ?? r.syntaxErrorCount ?? 0) === 0 ? "success" : "warning"}>{r.syntaxErrors ?? r.syntaxErrorCount ?? 0}S</Tag><Tag color={(r.logicErrors ?? r.logicErrorCount ?? 0) === 0 ? "success" : "error"}>{r.logicErrors ?? r.logicErrorCount ?? 0}M</Tag></Space>
     )},
-    { title: t("errorsTitle"), key: "errors", responsive: ["md" as const], render: (_: unknown, record: any) => (
-      <Space size={4}><Tag color={record.syntaxErrors === 0 ? "success" : "warning"}>{record.syntaxErrors}S</Tag><Tag color={record.logicErrors === 0 ? "success" : "error"}>{record.logicErrors}M</Tag></Space>
-    )},
-    { title: t("status"), key: "shared", responsive: ["md" as const], render: (_: unknown, record: any) =>
-      record.shared ? <Tag icon={<CheckCircleOutlined />} color="success">{t("shared")}</Tag> : <Tag color="default">{t("notShared")}</Tag>
+    { title: t("status"), key: "shared", responsive: ["md" as const], render: (_: unknown, r: any) =>
+      r.shared ? <Tag icon={<CheckCircleOutlined />} color="success">{t("shared")}</Tag> : <Tag color="default">{t("notShared")}</Tag>
     },
-    { title: "", key: "action", render: (_: unknown, record: any) => (
-      <Button type="text" icon={<EyeOutlined />} onClick={() => navigate(`/teacher/results/${record.id}`)} style={{ color: colors.accent }}>{t("detail")}</Button>
+    { title: "", key: "action", render: (_: unknown, r: any) => (
+      <Button type="text" icon={<EyeOutlined />} onClick={() => navigate(`/teacher/results/${r.id}`)} style={{ color: colors.accent }}>{t("detail")}</Button>
     )},
   ];
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <Title level={4} style={{ color: colors.textPrimary, margin: 0, fontFamily: "'JetBrains Mono'" }}>{t("results")}</Title>
-          <Text style={{ color: colors.textMuted }}>{t("manageResults")}</Text>
-        </div>
+        <div><Title level={4} style={{ color: colors.textPrimary, margin: 0, fontFamily: "'JetBrains Mono'" }}>{t("results")}</Title><Text style={{ color: colors.textMuted }}>{t("manageResults")}</Text></div>
         <Space wrap>
-          {selectedRows.length > 0 && (
-            <Button type="primary" icon={<ShareAltOutlined />} onClick={handleBulkShare} style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none" }}>
-              {selectedRows.length} {t("shareResults")}
-            </Button>
-          )}
-          <Dropdown menu={exportItems}><Button icon={<DownloadOutlined />}>{t("export")}</Button></Dropdown>
+          {selectedRows.length > 0 && <Button type="primary" icon={<ShareAltOutlined />} onClick={handleBulkShare} style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none" }}>{selectedRows.length} {t("shareResults")}</Button>}
+          <Dropdown menu={{ items: [
+            { key: "excel", icon: <FileExcelOutlined />, label: `Excel ${t("download")}`, onClick: () => handleExport("excel") },
+            { key: "pdf", icon: <FilePdfOutlined />, label: `PDF ${t("download")}`, onClick: () => handleExport("pdf") },
+          ] }}><Button icon={<DownloadOutlined />}>{t("export")}</Button></Dropdown>
         </Space>
       </div>
 
       <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16 }} styles={{ body: { padding: "12px 16px" } }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <Input placeholder={t("searchStudent")} prefix={<SearchOutlined style={{ color: colors.textDimmed }} />} value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220 }} />
-          <Select placeholder={t("course")} allowClear onChange={(val) => setCourseFilter(val)} options={coursesList.map((c) => ({ label: c, value: c }))} style={{ minWidth: 160 }} />
-          <Select placeholder={t("exam")} allowClear onChange={(val) => setExamFilter(val)} options={exams.map((e) => ({ label: e, value: e }))} style={{ minWidth: 200 }} />
+          <Select placeholder={t("course")} allowClear onChange={(v) => setCourseFilter(v)} options={coursesList.map((c) => ({ label: c, value: c }))} style={{ minWidth: 160 }} />
+          <Select placeholder={t("exam")} allowClear onChange={(v) => setExamFilter(v)} options={exams.map((e) => ({ label: e, value: e }))} style={{ minWidth: 200 }} />
         </div>
       </Card>
 
       <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }} styles={{ body: { padding: 0 } }}>
-        <Table dataSource={filtered} columns={columns} rowKey="id" pagination={{ pageSize: 10 }} rowSelection={{ selectedRowKeys: selectedRows, onChange: (keys) => setSelectedRows(keys as number[]) }} style={{ overflow: "auto" }} />
+        <Table dataSource={results} columns={columns} rowKey="id" loading={loading}
+          pagination={{ current: pagination.current, pageSize: pagination.pageSize, total: pagination.total, onChange: (p, ps) => fetchResults(p, ps) }}
+          rowSelection={{ selectedRowKeys: selectedRows, onChange: (keys) => setSelectedRows(keys as string[]) }} style={{ overflow: "auto" }} />
       </Card>
     </div>
   );

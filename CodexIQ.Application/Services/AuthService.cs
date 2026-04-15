@@ -45,6 +45,9 @@ namespace CodexIQ.Application.Services
 
             string token = _jwtProvider.GenerateToken(user);
 
+            if(user.IsActive==false)
+                throw new UnauthorizedException("Users with inactive status cannot log in.");
+
             return new AuthResponseDto
             {
                 Token = token,

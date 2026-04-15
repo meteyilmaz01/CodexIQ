@@ -7,10 +7,23 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "test:auth": "npx playwright test e2e/01-auth.spec.ts",
+    "test:admin-api": "npx playwright test e2e/02-admin-backend.spec.ts",
+    "test:teacher-api": "npx playwright test e2e/03-teacher-backend.spec.ts",
+    "test:student-api": "npx playwright test e2e/04-student-backend.spec.ts",
+    "test:messages-api": "npx playwright test e2e/05-messages-backend.spec.ts",
+    "test:admin-ui": "npx playwright test e2e/06-admin-ui.spec.ts",
+    "test:teacher-ui": "npx playwright test e2e/07-teacher-ui.spec.ts",
+    "test:student-ui": "npx playwright test e2e/08-student-ui.spec.ts",
+    "test:backend": "npx playwright test e2e/01-auth.spec.ts e2e/02-admin-backend.spec.ts e2e/03-teacher-backend.spec.ts e2e/04-student-backend.spec.ts e2e/05-messages-backend.spec.ts",
+    "test:frontend": "npx playwright test e2e/06-admin-ui.spec.ts e2e/07-teacher-ui.spec.ts e2e/08-student-ui.spec.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.1",
+    "@microsoft/signalr": "^10.0.0",
     "@tanstack/react-query": "^5.96.2",
     "antd": "^6.3.5",
     "axios": "^1.14.0",
@@ -21,6 +34,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

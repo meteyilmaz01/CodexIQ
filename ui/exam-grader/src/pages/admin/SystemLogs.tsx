@@ -1,57 +1,86 @@
-import { useState } from "react";
-import { Card, Table, Tag, Typography, Input, Select } from "antd";
+import { useState, useEffect, useRef } from "react";
+import { Card, Table, Tag, Typography, Input, Select, Spin } from "antd";
 import { SearchOutlined, InfoCircleOutlined, WarningOutlined, CloseCircleOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
+import { adminApi } from "../../api/adminApi";
+import * as signalR from "@microsoft/signalr";
 
 const { Title, Text } = Typography;
 
-const mockLogs = [
-  { id: 1, timestamp: "2026-04-07 10:32:15", level: "INFO", source: "AuthService", message: "User login: ahmet@univ.edu.tr", ip: "192.168.1.45" },
-  { id: 2, timestamp: "2026-04-07 10:30:02", level: "INFO", source: "ExamService", message: "45 exam papers uploaded by teacher_id=2", ip: "192.168.1.45" },
-  { id: 3, timestamp: "2026-04-07 10:29:58", level: "INFO", source: "QueueService", message: "Job enqueued: exam_eval_batch_47", ip: "10.0.0.1" },
-  { id: 4, timestamp: "2026-04-07 10:25:11", level: "WARNING", source: "GeminiAPI", message: "Rate limit approaching: 85% of quota used", ip: "10.0.0.1" },
-  { id: 5, timestamp: "2026-04-07 10:20:45", level: "ERROR", source: "LlamaAPI", message: "Connection timeout after 30s - retrying (attempt 2/3)", ip: "10.0.0.1" },
-  { id: 6, timestamp: "2026-04-07 10:20:30", level: "ERROR", source: "LlamaAPI", message: "Connection timeout after 30s - retrying (attempt 1/3)", ip: "10.0.0.1" },
-  { id: 7, timestamp: "2026-04-07 10:18:00", level: "INFO", source: "EvalWorker", message: "Evaluation completed: student_id=4, score=72", ip: "10.0.0.2" },
-  { id: 8, timestamp: "2026-04-07 10:15:22", level: "INFO", source: "AuthService", message: "User login: ali@mail.com", ip: "192.168.1.100" },
-  { id: 9, timestamp: "2026-04-07 10:10:05", level: "WARNING", source: "QueueService", message: "Queue depth exceeds threshold: 15 pending jobs", ip: "10.0.0.1" },
-  { id: 10, timestamp: "2026-04-07 09:55:00", level: "INFO", source: "SystemService", message: "Daily backup completed successfully", ip: "10.0.0.1" },
-  { id: 11, timestamp: "2026-04-07 09:30:12", level: "ERROR", source: "DeepSeekAPI", message: "Invalid response format - fallback to Gemini", ip: "10.0.0.1" },
-  { id: 12, timestamp: "2026-04-07 09:00:00", level: "INFO", source: "SystemService", message: "System startup completed - all services healthy", ip: "10.0.0.1" },
-];
-
 const SystemLogs = () => {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
+  const connectionRef = useRef<signalR.HubConnection | null>(null);
   const colors = useThemeColors();
   const t = useT();
 
-  const filtered = mockLogs.filter((l) => {
-    const matchSearch = l.message.toLowerCase().includes(search.toLowerCase()) || l.source.toLowerCase().includes(search.toLowerCase());
+  useEffect(() => {
+    const loadLogs = async () => {
+      try {
+        const res = await adminApi.getLogs(100);
+        const data = res.data || res;
+        setLogs(Array.isArray(data) ? data : data.items || data.results || []);
+      } catch { setLogs([]); }
+      finally { setLoading(false); }
+    };
+    loadLogs();
+  }, []);
+
+  // SignalR bağlantısı
+  useEffect(() => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:5062";
+    const token = localStorage.getItem("token");
+
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${baseUrl}/hubs/logs`, {
+        accessTokenFactory: () => token || "",
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on("ReceiveLog", (log: any) => {
+      setLogs((prev) => [log, ...prev].slice(0, 200));
+    });
+
+    connection.start().catch((err) => console.warn("LogHub bağlantı hatası:", err));
+
+    connectionRef.current = connection;
+
+    return () => {
+      connection.stop();
+    };
+  }, []);
+
+  const filtered = logs.filter((l: any) => {
+    const msg = l.message || "";
+    const src = l.source || "";
+    const matchSearch = msg.toLowerCase().includes(search.toLowerCase()) || src.toLowerCase().includes(search.toLowerCase());
     const matchLevel = !levelFilter || l.level === levelFilter;
     const matchSource = !sourceFilter || l.source === sourceFilter;
     return matchSearch && matchLevel && matchSource;
   });
 
-  const sources = [...new Set(mockLogs.map((l) => l.source))];
+  const sources = [...new Set(logs.map((l: any) => l.source).filter(Boolean))];
 
   const getLevelConfig = (level: string) => {
     switch (level) {
-      case "INFO": return { color: "blue", icon: <InfoCircleOutlined /> };
-      case "WARNING": return { color: "orange", icon: <WarningOutlined /> };
-      case "ERROR": return { color: "red", icon: <CloseCircleOutlined /> };
+      case "INFO": case "Information": return { color: "blue", icon: <InfoCircleOutlined /> };
+      case "WARNING": case "Warning": return { color: "orange", icon: <WarningOutlined /> };
+      case "ERROR": case "Error": return { color: "red", icon: <CloseCircleOutlined /> };
       default: return { color: "default", icon: <CheckCircleOutlined /> };
     }
   };
 
   const columns = [
-    { title: t("time"), dataIndex: "timestamp", key: "timestamp", width: 170, render: (ts: string) => <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: "'JetBrains Mono'" }}>{ts}</Text> },
+    { title: t("time"), key: "timestamp", width: 170, render: (_: unknown, r: any) => <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: "'JetBrains Mono'" }}>{r.timestamp || r.createdAt || ""}</Text> },
     { title: t("level"), dataIndex: "level", key: "level", width: 100, render: (l: string) => { const c = getLevelConfig(l); return <Tag icon={c.icon} color={c.color} style={{ borderRadius: 4 }}>{l}</Tag>; } },
-    { title: t("source"), dataIndex: "source", key: "source", width: 130, responsive: ["md" as const], render: (s: string) => <Tag style={{ borderRadius: 6, fontFamily: "'JetBrains Mono'", fontSize: 11 }}>{s}</Tag> },
+    { title: t("source"), dataIndex: "source", key: "source", width: 130, responsive: ["md" as const], render: (s: string) => <Tag style={{ borderRadius: 6, fontFamily: "'JetBrains Mono'", fontSize: 11 }}>{s || "-"}</Tag> },
     { title: t("messageLabel"), dataIndex: "message", key: "message", render: (m: string) => <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: "'JetBrains Mono'" }}>{m}</Text> },
-    { title: "IP", dataIndex: "ip", key: "ip", width: 120, responsive: ["lg" as const], render: (ip: string) => <Text style={{ color: colors.textDimmed, fontSize: 12, fontFamily: "'JetBrains Mono'" }}>{ip}</Text> },
+    { title: "IP", key: "ip", width: 120, responsive: ["lg" as const], render: (_: unknown, r: any) => <Text style={{ color: colors.textDimmed, fontSize: 12, fontFamily: "'JetBrains Mono'" }}>{r.ip || r.ipAddress || ""}</Text> },
   ];
 
   return (
@@ -70,7 +99,7 @@ const SystemLogs = () => {
       </Card>
 
       <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }} styles={{ body: { padding: 0 } }}>
-        <Table dataSource={filtered} columns={columns} rowKey="id" pagination={{ pageSize: 15 }} size="small" />
+        <Table dataSource={filtered} columns={columns} rowKey={(r) => r.id || `${r.timestamp}-${r.message}`} loading={loading} pagination={{ pageSize: 15 }} size="small" />
       </Card>
     </div>
   );
