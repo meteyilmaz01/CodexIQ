@@ -18,6 +18,12 @@ namespace CodexIQ.Application.Interfaces.Services
 
         Task<ExamResultDetailDto?> GetExamResultDetailAsync(Guid studentId, Guid examPaperId);
 
+        /// <summary>
+        /// Öğrencinin kendi sınav kağıdının orijinal görselini döndürür.
+        /// Sonuç öğretmen tarafından paylaşılmamışsa null döner.
+        /// </summary>
+        Task<byte[]?> GetExamPaperImageAsync(Guid studentId, Guid examPaperId);
+
         Task<StudentProfileDto> GetProfileAsync(Guid studentId);
         Task UpdateProfileAsync(Guid studentId, UpdateProfileRequestDto request);
     }

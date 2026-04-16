@@ -75,6 +75,25 @@ public class StudentController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Öğrencinin sınav kağıdının orijinal görselini döndürür.
+    /// Sonuç öğretmen tarafından paylaşılmamışsa 404 döner.
+    /// </summary>
+    [HttpGet("results/{id}/paper-image")]
+    public async Task<IActionResult> GetPaperImage(Guid id)
+    {
+        var imageBytes = await _studentService.GetExamPaperImageAsync(GetUserId(), id);
+
+        if (imageBytes == null)
+        {
+            _logger.LogWarning("Kağıt görseli bulunamadı veya paylaşılmamış (ExamPaperId: {Id})", id);
+            throw new CodexIQ.Application.Exceptions.NotFoundException("Kağıt görseli bulunamadı veya henüz paylaşılmamış.");
+        }
+
+        _logger.LogInformation("Kağıt görseli görüntülendi (ExamPaperId: {Id})", id);
+        return File(imageBytes, "image/jpeg");
+    }
+
     [HttpGet("results")]
     public async Task<IActionResult> GetExamResults(
     [FromQuery] string? search,

@@ -237,6 +237,84 @@ playwright.config.ts         → Playwright konfig (msedge channel!)
 
 ---
 
+## 9. PYTHON WORKER ENTEGRASYON DETAYLARI
+
+### Mesaj Akışı (Düzeltilmiş)
+```
+StartEvaluation (POST /api/teacher/exams/{id}/start-evaluation)
+  → TeacherService.StartEvaluationAsync() → papers'ı Extracting yap, queue listesi döndür
+  → TeacherController: her paper için ayrı EvaluateExamCommand gönder (evaluate-exam-queue)
+
+Python Worker (evaluate-exam-queue):
+  → OCR: öğrenci bilgisi + kod oku
+  → Ensemble: 3 model paralel değerlendir (Gemini + Groq + Ollama)
+  → Hakem: Gemini nihai JSON kararı
+  → exam-results-queue'ya per-paper sonuç gönder
+
+ExamResultConsumer (.NET, exam-results-queue):
+  → ExamPaper'ı bul
+  → ExtractedCode oluştur/güncelle
+  → 3 AIModelResult kaydı oluştur
+  → FinalEvaluation'ı GERÇEK skorla doldur (artık 85 hardcoded değil!)
+  → Öğrenci adı → User tablosunda eşleştir → StudentId güncelle
+  → Status = Completed/Failed
+```
+
+### EvaluateExamCommand (Python'a giden mesaj)
+```json
+{
+  "examId": "guid",
+  "teacherId": "guid",
+  "examPaperId": "guid",
+  "imagePath": "exams/guid/guid_page1.jpg",
+  "teacherContext": "## Sınav: ...\n## Rubric: ...",
+  "programmingLanguage": "Python"
+}
+```
+
+### ExamResultPublished (Python'dan gelen mesaj)
+```json
+{
+  "examPaperId": "guid",
+  "examId": "guid",
+  "studentInfo": { "firstName": "...", "lastName": "...", "studentNumber": "..." },
+  "extractedCode": "print('hello')",
+  "evaluation": {
+    "toplam_puan": 85,
+    "syntax_hatalari": [...],
+    "mantik_hatalari": [...],
+    "hakem_ozeti": "...",
+    "gelisim_alanlari": [...],
+    "genel_degerlendirme": "..."
+  },
+  "modelScores": { "gemini": 90, "groq_llama": 85, "ollama_llama": 80 },
+  "status": "completed"
+}
+```
+
+### PDF Desteği
+- Öğretmen tek PDF yükleyebilir (çoklu kağıt)
+- Her PDF sayfası = bir öğrenci kağıdı = bir ExamPaper kaydı
+- PDF → JPEG dönüşümü: PDFtoImage kütüphanesi (Infrastructure layer)
+- StudentId başta null, OCR sonrası isim eşleştirmesiyle doldurulur
+
+### Python Worker Kurulumu
+```bash
+cd "proje dosyaları/project python"
+pip install -r requirements.txt   # python-dotenv dahil
+# .env dosyası zaten oluşturuldu (API keyleri içinde)
+python worker.py
+```
+
+### Öğrenci Kağıt Görüntüleme
+```
+GET /api/student/results/{examPaperId}/paper-image
+→ Öğretmen IsShared=true yapınca erişilebilir
+→ image/jpeg döner
+```
+
+---
+
 ## 8. YAPILMIS DEGISIKLIKLER OZETI
 
 Bu oturumda yapilan tum degisiklikler:

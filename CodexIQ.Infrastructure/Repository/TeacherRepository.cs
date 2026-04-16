@@ -159,10 +159,11 @@ namespace CodexIQ.Infrastructure.Repository
             if (!string.IsNullOrWhiteSpace(search))
             {
                 search = search.ToLower();
+                // StudentId nullable olabilir — null student'ı aramadan çıkar
                 query = query.Where(ep =>
-                    ep.Student.FirstName.ToLower().Contains(search) ||
-                    ep.Student.LastName.ToLower().Contains(search) ||
-                    ep.Student.Email.ToLower().Contains(search));
+                    (ep.Student != null && ep.Student.FirstName.ToLower().Contains(search)) ||
+                    (ep.Student != null && ep.Student.LastName.ToLower().Contains(search)) ||
+                    (ep.Student != null && ep.Student.Email.ToLower().Contains(search)));
             }
 
             if (!string.IsNullOrWhiteSpace(course))

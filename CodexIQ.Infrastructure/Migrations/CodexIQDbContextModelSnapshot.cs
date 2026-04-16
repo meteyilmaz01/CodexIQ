@@ -199,7 +199,7 @@ namespace CodexIQ.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("StudentId")
+                    b.Property<Guid?>("StudentId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("UploadAt")
@@ -535,8 +535,7 @@ namespace CodexIQ.Infrastructure.Migrations
                     b.HasOne("CodexIQ.Domain.Entities.User", "Student")
                         .WithMany("ExamPapers")
                         .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Exam");
 

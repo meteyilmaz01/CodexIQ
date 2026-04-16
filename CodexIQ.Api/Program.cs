@@ -53,7 +53,9 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 builder.Services.AddDbContext<CodexIQDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PostgreSqlConnection")));
+    options
+        .UseNpgsql(builder.Configuration.GetConnectionString("PostgreSqlConnection"))
+        .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
 builder.Services.AddMassTransit(x =>
 {
@@ -197,6 +199,13 @@ Log.Logger = new LoggerConfiguration()
         respectCase: true)
     .WriteTo.Sink(new SignalRLogSink(app.Services))
     .CreateLogger();
+
+// Bekleyen migration'ları otomatik uygula
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<CodexIQDbContext>();
+    db.Database.Migrate();
+}
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 

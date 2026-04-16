@@ -1,0 +1,21 @@
+{
+    "studentInfo": {
+        "first_name": "METE",
+        "last_name": "YILMAZ",
+        "student_number": "2110206040"
+    },
+    "extractedCode": "print(\"Merhaba dünya\")",
+    "evaluation": {
+        "toplam_puan": 0,
+        "syntax_hatalari": [],
+        "mantik_hatalari": [],
+        "hakem_ozeti": "Değerlendirme sırasında hata oluştu: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
+        "gelisim_alanlari": [],
+        "genel_degerlendirme": "Değerlendirme tamamlanamadı."
+    },
+    "modelScores": {
+        "gemini": 0,
+        "groq_llama": 100,
+        "ollama_llama": 60
+    }
+}

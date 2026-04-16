@@ -63,15 +63,17 @@ public class TeacherController : ControllerBase
     }
 
     [HttpPost("exams/{examId}/papers")]
-    public async Task<IActionResult> UploadPapers(Guid examId, [FromForm] List<IFormFile> files)
+    public async Task<IActionResult> UploadPapers(Guid examId)
     {
-        if (files == null || !files.Any())
+        var files = Request.Form.Files;
+
+        if (files == null || files.Count == 0)
         {
             _logger.LogWarning("Dosya yüklenmeden kağıt ekleme denendi (ExamId: {ExamId})", examId);
             throw new CodexIQ.Application.Exceptions.ValidationException("Dosya yüklenmedi");
         }
 
-        var result = await _teacherService.UploadPapersAsync(GetUserId(), examId, files);
+        var result = await _teacherService.UploadPapersAsync(GetUserId(), examId, files.ToList());
         _logger.LogInformation("{Count} kağıt yüklendi (ExamId: {ExamId})", result.UploadedCount, examId);
         return Ok(result);
     }
@@ -202,17 +204,39 @@ public class TeacherController : ControllerBase
     [HttpPost("exams/{examId}/start-evaluation")]
     public async Task<IActionResult> StartEvaluation(Guid examId, [FromServices] ISendEndpointProvider sendEndpointProvider)
     {
-        await _teacherService.StartEvaluationAsync(GetUserId(), examId);
+        // Servisten her kağıt için kuyruk bilgilerini al
+        var papers = await _teacherService.StartEvaluationAsync(GetUserId(), examId);
+
+        if (!papers.Any())
+        {
+            return Ok(new { success = true, message = "Bekleyen kağıt bulunamadı." });
+        }
 
         var endpoint = await sendEndpointProvider.GetSendEndpoint(new Uri("queue:evaluate-exam-queue"));
+        var teacherId = GetUserId();
 
-        await endpoint.Send(new CodexIQ.Infrastructure.Messaging.EvaluateExamCommand
+        // Her kağıt için ayrı komut gönder
+        foreach (var paper in papers)
         {
-            ExamId = examId,
-            TeacherId = GetUserId()
-        });
+            await endpoint.Send(new CodexIQ.Infrastructure.Messaging.EvaluateExamCommand
+            {
+                ExamId              = examId,
+                TeacherId           = teacherId,
+                ExamPaperId         = paper.PaperId,
+                ImagePath           = paper.ImagePath,
+                TeacherContext      = paper.TeacherContext,
+                ProgrammingLanguage = paper.ProgrammingLanguage
+            });
+        }
 
-        _logger.LogInformation("Değerlendirme başlatıldı (ExamId: {ExamId})", examId);
-        return Ok(new { success = true, message = "Değerlendirme kuyruğa alındı, arka planda işleniyor." });
+        _logger.LogInformation(
+            "Değerlendirme başlatıldı: {Count} kağıt kuyruğa alındı (ExamId: {ExamId})",
+            papers.Count, examId);
+
+        return Ok(new
+        {
+            success = true,
+            message = $"Değerlendirme başlatıldı. {papers.Count} kağıt sıraya alındı."
+        });
     }
 }

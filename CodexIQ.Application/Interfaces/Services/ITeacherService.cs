@@ -12,7 +12,11 @@ public interface ITeacherService
     Task<CreateExamResponseDto> CreateExamAsync(Guid teacherId, CreateExamRequestDto request);
     Task<UploadPapersResponseDto> UploadPapersAsync(Guid teacherId, Guid examId, List<IFormFile> files);
     Task SaveRubricAsync(Guid teacherId, Guid examId, SaveRubricRequestDto request);
-    Task StartEvaluationAsync(Guid teacherId, Guid examId);
+    /// <summary>
+    /// Bekleyen kağıtları Extracting durumuna alır.
+    /// Her kağıt için kuyruk bilgisi döndürür (controller per-paper komut gönderir).
+    /// </summary>
+    Task<List<ExamPaperQueueDto>> StartEvaluationAsync(Guid teacherId, Guid examId);
 
     // Results
     Task<PaginatedResult<TeacherResultListItemDto>> GetResultsAsync(

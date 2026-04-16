@@ -1,0 +1,6 @@
+pika
+google-genai
+openai
+ollama
+Pillow
+pydantic

@@ -112,18 +112,46 @@ public class TeacherService : ITeacherService
 
         foreach (var file in files)
         {
-            var relativePath = await _fileStorage.SaveFileAsync(file, $"exams/{examId}");
+            bool isPdf = file.ContentType == "application/pdf"
+                      || Path.GetExtension(file.FileName).ToLowerInvariant() == ".pdf";
 
-            papers.Add(new ExamPaper
+            if (isPdf)
             {
-                ExamId = examId,
-                StudentId = Guid.Parse("afac0074-3d9d-4b49-929b-60ea034a676a"),
-                ImagePath = relativePath,
-                UploadAt = DateTime.UtcNow,
-                Status = EvaluationStatus.Pending
-            });
+                // PDF → sayfalara böl → her sayfa ayrı ExamPaper (1 sayfa = 1 öğrenci kağıdı)
+                using var ms = new System.IO.MemoryStream();
+                await file.CopyToAsync(ms);
+                var pdfBytes = ms.ToArray();
 
-            fileNames.Add(file.FileName);
+                var pagePaths = await _fileStorage.SavePdfPagesAsync(pdfBytes, $"exams/{examId}");
+
+                foreach (var pagePath in pagePaths)
+                {
+                    papers.Add(new ExamPaper
+                    {
+                        ExamId = examId,
+                        StudentId = null,   // OCR sonrası ExamResultConsumer tarafından doldurulur
+                        ImagePath = pagePath,
+                        UploadAt = DateTime.UtcNow,
+                        Status = EvaluationStatus.Pending
+                    });
+                    fileNames.Add(System.IO.Path.GetFileName(pagePath));
+                }
+            }
+            else
+            {
+                // Normal resim dosyası (JPG, PNG, vb.)
+                var relativePath = await _fileStorage.SaveFileAsync(file, $"exams/{examId}");
+
+                papers.Add(new ExamPaper
+                {
+                    ExamId = examId,
+                    StudentId = null,   // OCR sonrası doldurulur
+                    ImagePath = relativePath,
+                    UploadAt = DateTime.UtcNow,
+                    Status = EvaluationStatus.Pending
+                });
+                fileNames.Add(file.FileName);
+            }
         }
 
         await _unitOfWork.Teacher.AddExamPapersAsync(papers);
@@ -153,7 +181,7 @@ public class TeacherService : ITeacherService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    public async Task StartEvaluationAsync(Guid teacherId, Guid examId)
+    public async Task<List<ExamPaperQueueDto>> StartEvaluationAsync(Guid teacherId, Guid examId)
     {
         var exam = await _unitOfWork.Teacher.GetExamByIdAsync(examId, teacherId);
         if (exam == null) throw new NotFoundException("Sınav bulunamadı");
@@ -161,12 +189,43 @@ public class TeacherService : ITeacherService
         if (!exam.ExamPaper.Any())
             throw new BusinessException("Sınav kağıdı yüklenmemiş");
 
+        var teacherContext = BuildTeacherContext(exam);
+        var language = exam.ProgrammingLanguage ?? "unknown";
+
+        var queue = new List<ExamPaperQueueDto>();
+
         foreach (var paper in exam.ExamPaper.Where(p => p.Status == EvaluationStatus.Pending))
         {
             paper.Status = EvaluationStatus.Extracting;
+            queue.Add(new ExamPaperQueueDto
+            {
+                PaperId           = paper.Id,
+                ImagePath         = paper.ImagePath,
+                TeacherContext    = teacherContext,
+                ProgrammingLanguage = language
+            });
         }
 
         await _unitOfWork.SaveChangesAsync();
+        return queue;
+    }
+
+    private static string BuildTeacherContext(Exam exam)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"## Sınav: {exam.Name}");
+        sb.AppendLine($"## Kodun Amacı: {exam.CodePurpose}");
+        sb.AppendLine($"## Programlama Dili: {exam.ProgrammingLanguage}");
+
+        if (exam.RubricCriterias != null && exam.RubricCriterias.Any())
+        {
+            sb.AppendLine("## Değerlendirme Kriterleri (Rubric):");
+            foreach (var criteria in exam.RubricCriterias)
+                sb.AppendLine($"  - {criteria.Criteria}: {criteria.MaxPoints} puan");
+        }
+
+        sb.AppendLine("## OCR Toleransı: El yazısı kaynaklı küçük yazım hatalarına (eksik girintileme vb.) toleranslı ol.");
+        return sb.ToString();
     }
 
     public async Task<PaginatedResult<TeacherResultListItemDto>> GetResultsAsync(
@@ -178,8 +237,10 @@ public class TeacherService : ITeacherService
         var items = papers.Select(ep => new TeacherResultListItemDto
         {
             Id = ep.Id,
-            StudentName = $"{ep.Student.FirstName} {ep.Student.LastName}",
-            StudentNo = ep.Student.Email,
+            StudentName = ep.Student != null
+                ? $"{ep.Student.FirstName} {ep.Student.LastName}"
+                : "OCR Bekleniyor",
+            StudentNo = ep.Student?.Email ?? "",
             ExamName = ep.Exam.Name,
             CourseName = ep.Exam.Course.Name,
             Date = ep.FinalEvaluation!.EvaluatedAt,
@@ -231,8 +292,10 @@ public class TeacherService : ITeacherService
         return new TeacherResultDetailDto
         {
             Id = paper.Id,
-            StudentName = $"{paper.Student.FirstName} {paper.Student.LastName}",
-            StudentNo = paper.Student.Email,
+            StudentName = paper.Student != null
+                ? $"{paper.Student.FirstName} {paper.Student.LastName}"
+                : "OCR Bekleniyor",
+            StudentNo = paper.Student?.Email ?? "",
             ExamName = paper.Exam.Name,
             CourseName = paper.Exam.Course.Name,
             CodePurpose = paper.Exam.CodePurpose,
@@ -310,7 +373,9 @@ public class TeacherService : ITeacherService
 
         foreach (var ep in papers)
         {
-            sb.AppendLine($"{ep.Student.FirstName} {ep.Student.LastName},{ep.Student.Email},{ep.Exam.Name},{ep.Exam.Course.Name},{ep.FinalEvaluation!.FinalScore},{ep.FinalEvaluation.SyntaxErrorCount},{ep.FinalEvaluation.LogicErrorCount},{ep.FinalEvaluation.IsShared}");
+            var studentName  = ep.Student != null ? $"{ep.Student.FirstName} {ep.Student.LastName}" : "OCR Bekleniyor";
+            var studentEmail = ep.Student?.Email ?? "";
+            sb.AppendLine($"{studentName},{studentEmail},{ep.Exam.Name},{ep.Exam.Course.Name},{ep.FinalEvaluation!.FinalScore},{ep.FinalEvaluation.SyntaxErrorCount},{ep.FinalEvaluation.LogicErrorCount},{ep.FinalEvaluation.IsShared}");
         }
 
         return System.Text.Encoding.UTF8.GetBytes(sb.ToString());

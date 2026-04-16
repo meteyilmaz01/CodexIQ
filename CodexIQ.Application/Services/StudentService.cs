@@ -2,6 +2,7 @@
 using CodexIQ.Application.Exceptions;
 using CodexIQ.Application.Interfaces.CoreDataInterfaces;
 using CodexIQ.Application.Interfaces.Services;
+using CodexIQ.Application.Interfaces.Storage;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,10 +13,12 @@ namespace CodexIQ.Application.Services
     public class StudentService : IStudentService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IFileStorageService _fileStorage;
 
-        public StudentService(IUnitOfWork unitOfWork)
+        public StudentService(IUnitOfWork unitOfWork, IFileStorageService fileStorage)
         {
             _unitOfWork = unitOfWork;
+            _fileStorage = fileStorage;
         }
 
         public async Task<List<RecentResultsDto>> GetRecentResultsAsync(Guid studentId)
@@ -136,6 +139,28 @@ namespace CodexIQ.Application.Services
                 }).ToList()
             };
         }
+
+    public async Task<byte[]?> GetExamPaperImageAsync(Guid studentId, Guid examPaperId)
+    {
+        // Öğrencinin kendi kağıdını getir (student repository zaten studentId filtresi uygular)
+        var paper = await _unitOfWork.Student.GetExamResultDetailAsync(studentId, examPaperId);
+
+        if (paper == null || string.IsNullOrWhiteSpace(paper.ImagePath))
+            return null;
+
+        // Öğretmen paylaşmamışsa görseli gösterme
+        if (paper.FinalEvaluation?.IsShared != true)
+            return null;
+
+        try
+        {
+            return await _fileStorage.ReadFileAsync(paper.ImagePath);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     public async Task<PaginatedResult<ExamResultListItemDto>> GetExamResultsAsync(
             Guid studentId,
