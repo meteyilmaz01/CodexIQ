@@ -23,7 +23,10 @@ export const authApi = {
     return response.data;
   },
   changePassword: async (data: { oldPassword: string; newPassword: string }) => {
-    const response = await api.put("/auth/change-password", data);
+    const response = await api.put("/auth/change-password", {
+      currentPassword: data.oldPassword,
+      newPassword: data.newPassword,
+    });
     return response.data;
   },
 };

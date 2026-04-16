@@ -43,10 +43,10 @@ namespace CodexIQ.Application.Services
             if (!isPasswordValid)
                 throw new UnauthorizedException("You entered the wrong password.");
 
-            string token = _jwtProvider.GenerateToken(user);
-
-            if(user.IsActive==false)
+            if (user.IsActive == false)
                 throw new UnauthorizedException("Users with inactive status cannot log in.");
+
+            string token = _jwtProvider.GenerateToken(user);
 
             return new AuthResponseDto
             {

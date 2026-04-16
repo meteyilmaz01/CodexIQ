@@ -29,7 +29,7 @@ test.describe("Messages Backend API - Deep Functional Tests", () => {
 
   test("Unauthenticated cannot send message", async ({ request }) => {
     const res = await request.post(`${API_BASE}/messages`, {
-      data: { receiverId: "some-id", content: "hello" },
+      data: { receiverId: "some-id", text: "hello" },
     });
     expect(res.status()).toBe(401);
   });
@@ -67,7 +67,7 @@ test.describe("Messages Backend API - Deep Functional Tests", () => {
       if (!teacherId) return;
       const res = await request.post(`${API_BASE}/messages`, {
         headers: studentAuth(),
-        data: { receiverId: teacherId, content: `PW test message from student ${Date.now()}` },
+        data: { receiverId: teacherId, text: `PW test message from student ${Date.now()}` },
       });
       expect(res.ok()).toBeTruthy();
     });
@@ -76,7 +76,7 @@ test.describe("Messages Backend API - Deep Functional Tests", () => {
       if (!studentId) return;
       const res = await request.post(`${API_BASE}/messages`, {
         headers: teacherAuth(),
-        data: { receiverId: studentId, content: `PW test message from teacher ${Date.now()}` },
+        data: { receiverId: studentId, text: `PW test message from teacher ${Date.now()}` },
       });
       expect(res.ok()).toBeTruthy();
     });
@@ -85,7 +85,7 @@ test.describe("Messages Backend API - Deep Functional Tests", () => {
       if (!teacherId) return;
       const res = await request.post(`${API_BASE}/messages`, {
         headers: studentAuth(),
-        data: { receiverId: teacherId, content: "" },
+        data: { receiverId: teacherId, text: "" },
       });
       expect(res.ok()).toBeFalsy();
     });
