@@ -97,6 +97,7 @@ namespace CodexIQ.Infrastructure.Repository
                     FullName = x.FirstName + " " + x.LastName,
                     Email = x.Email,
                     Role = x.Role.ToString(),
+                    StudentNumber = x.StudentNumber,
                     IsActive = x.IsActive,
                     CreatedDate = x.CreatedDate
                 })
@@ -329,6 +330,50 @@ namespace CodexIQ.Infrastructure.Repository
                     new() { QueueName = "exam-results-queue", TotalCount = extracting + evaluating, Status = "Active" }
                 }
             };
+        }
+
+        public async Task<List<AdminUserListItemDto>> GetStudentsByClassIdAsync(Guid classId)
+        {
+            return await _context.StudentClasses
+                .Where(sc => sc.ClassId == classId)
+                .Select(sc => new AdminUserListItemDto
+                {
+                    Id = sc.StudentId,
+                    Email = sc.Student.Email,
+                    FullName = sc.Student.FirstName + " " + sc.Student.LastName,
+                    Role = sc.Student.Role.ToString(),
+                    StudentNumber = sc.Student.StudentNumber,
+                    IsActive = sc.Student.IsActive,
+                    CreatedDate = sc.Student.CreatedDate
+                })
+                .ToListAsync();
+        }
+
+        public async Task AssignStudentsToClassAsync(Guid classId, List<Guid> studentIds)
+        {
+            var existing = await _context.StudentClasses
+                .Where(sc => sc.ClassId == classId)
+                .Select(sc => sc.StudentId)
+                .ToListAsync();
+
+            var toAdd = studentIds.Except(existing).ToList();
+
+            foreach (var studentId in toAdd)
+            {
+                _context.StudentClasses.Add(new CodexIQ.Domain.Entities.StudentClass
+                {
+                    ClassId = classId,
+                    StudentId = studentId
+                });
+            }
+        }
+
+        public async Task RemoveStudentFromClassAsync(Guid classId, Guid studentId)
+        {
+            var entry = await _context.StudentClasses
+                .FirstOrDefaultAsync(sc => sc.ClassId == classId && sc.StudentId == studentId);
+            if (entry != null)
+                _context.StudentClasses.Remove(entry);
         }
     }
 }

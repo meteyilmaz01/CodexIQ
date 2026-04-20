@@ -201,6 +201,30 @@ public class TeacherController : ControllerBase
         return Ok(new { success = true, message = "Profil güncellendi" });
     }
 
+    [HttpGet("courses")]
+    public async Task<IActionResult> GetCourses()
+    {
+        _logger.LogInformation("Öğretmen ders listesi görüntülendi");
+        var result = await _teacherService.GetCoursesAsync(GetUserId());
+        return Ok(result);
+    }
+
+    [HttpGet("classes")]
+    public async Task<IActionResult> GetClasses()
+    {
+        _logger.LogInformation("Öğretmen sınıf listesi görüntülendi");
+        var result = await _teacherService.GetClassesAsync(GetUserId());
+        return Ok(result);
+    }
+
+    [HttpGet("announcements")]
+    public async Task<IActionResult> GetAnnouncements()
+    {
+        _logger.LogInformation("Öğretmen duyurular görüntülendi");
+        var result = await _teacherService.GetAnnouncementsAsync();
+        return Ok(result);
+    }
+
     [HttpPost("exams/{examId}/start-evaluation")]
     public async Task<IActionResult> StartEvaluation(Guid examId, [FromServices] ISendEndpointProvider sendEndpointProvider)
     {

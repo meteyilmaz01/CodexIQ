@@ -45,10 +45,23 @@ const CodeTest = () => {
   const handleRun = async () => {
     setRunning(true);
     setOutput("");
-    setTimeout(() => {
-      setOutput("Hello, World!\n\nProgram çıkış kodu: 0\nÇalışma süresi: 0.003s");
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5062/api'}/student/run-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ code, language }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setOutput(data.output || data.data?.output || '');
+    } catch {
+      setOutput('⚠ Kod çalıştırma servisi şu an kullanılamıyor.\nLütfen daha sonra tekrar deneyin.');
+    } finally {
       setRunning(false);
-    }, 1500);
+    }
   };
 
   const handleImageUpload = (file: File) => {
@@ -64,23 +77,25 @@ const CodeTest = () => {
   const handleConvert = async () => {
     if (!uploadedImage) return;
     setConverting(true);
-    setTimeout(() => {
-      setConvertedCode(`#include <stdio.h>
-#include <stdlib.h>
-
-int factorial(int n) {
-    if (n <= 1) return 1;
-    return n * factorial(n - 1);
-}
-
-int main() {
-    int num = 5;
-    printf("%d! = %d\\n", num, factorial(num));
-    return 0;
-}`);
-      setConverting(false);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5062/api'}/student/convert-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ imageBase64: uploadedImage, language }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setConvertedCode(data.code || data.data?.code || '// Kod çevrilemedi');
       message.success(t("codeConvertedSuccess"));
-    }, 2500);
+    } catch (err: any) {
+      message.error('Kod çevirme başarısız: ' + (err.message || 'Bilinmeyen hata'));
+      setConvertedCode(null);
+    } finally {
+      setConverting(false);
+    }
   };
 
   const handleUseConvertedCode = () => {
@@ -182,7 +197,7 @@ int main() {
                         <Text style={{ display: "block", color: colors.textMuted, marginTop: 12 }}>{t("codeRunning")}</Text>
                       </div>
                     ) : output ? (
-                      <pre style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "#52c41a", margin: 0, whiteSpace: "pre-wrap" }}>
+                      <pre style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: output.startsWith('⚠') ? "#faad14" : "#52c41a", margin: 0, whiteSpace: "pre-wrap" }}>
                         <CheckCircleOutlined style={{ marginRight: 8, color: "#52c41a" }} />
                         {output}
                       </pre>

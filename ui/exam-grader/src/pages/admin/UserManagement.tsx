@@ -50,7 +50,7 @@ const UserManagement = () => {
   }, [search, roleFilter, statusFilter]);
 
   const handleAdd = () => { setEditingUser(null); form.resetFields(); setModalOpen(true); };
-  const handleEdit = (user: any) => { setEditingUser(user); form.setFieldsValue({ name: user.name || `${user.firstName || ""} ${user.lastName || ""}`, email: user.email, role: user.role, department: user.department }); setModalOpen(true); };
+  const handleEdit = (user: any) => { setEditingUser(user); form.setFieldsValue({ name: user.name || `${user.firstName || ""} ${user.lastName || ""}`, email: user.email, role: user.role, department: user.department, studentNumber: user.studentNumber }); setModalOpen(true); };
 
   const handleSave = async () => {
     try {
@@ -67,6 +67,7 @@ const UserManagement = () => {
           lastName: nameParts.slice(1).join(" ") || "",
           role: values.role,
           password: values.password,
+          studentNumber: values.role === "Student" ? values.studentNumber : undefined,
         });
         message.success(t("userAdded"));
       }
@@ -115,6 +116,7 @@ const UserManagement = () => {
     },
     { title: t("role"), dataIndex: "role", key: "role", render: (role: string) => <Tag color={role === "Admin" ? "error" : role === "Teacher" ? "blue" : "success"} style={{ borderRadius: 6 }}>{role}</Tag> },
     { title: t("department"), dataIndex: "department", key: "department", responsive: ["lg" as const], render: (text: string) => <Text style={{ color: colors.textSubtle, fontSize: 13 }}>{text || "-"}</Text> },
+    { title: "No", key: "studentNumber", responsive: ["lg" as const], render: (_: unknown, r: any) => <Text style={{ color: colors.textSubtle, fontSize: 13 }}>{r.studentNumber || "-"}</Text> },
     { title: t("status"), key: "status", responsive: ["md" as const], render: (_: unknown, r: any) => {
       const active = r.isActive ?? r.status === "active";
       return active ? <Tag icon={<CheckCircleOutlined />} color="success">{t("active")}</Tag> : <Tag icon={<StopOutlined />} color="default">{t("inactive")}</Tag>;
@@ -159,6 +161,11 @@ const UserManagement = () => {
           </Row>
           <Form.Item name="email" label={t("email")} rules={[{ required: true, type: "email", message: t("validEmail") }]}><Input prefix={<MailOutlined style={{ color: colors.textDimmed }} />} /></Form.Item>
           <Form.Item name="department" label={t("department")} rules={[{ required: true, message: t("required") }]}><Input /></Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.role !== cur.role}>
+            {({ getFieldValue }) => getFieldValue("role") === "Student" ? (
+              <Form.Item name="studentNumber" label="Öğrenci No"><Input placeholder="2110206040" /></Form.Item>
+            ) : null}
+          </Form.Item>
           {!editingUser && <Form.Item name="password" label={t("password")} rules={[{ required: true, min: 6, message: t("minChars") }]}><Input.Password prefix={<LockOutlined style={{ color: colors.textDimmed }} />} /></Form.Item>}
         </Form>
       </Modal>

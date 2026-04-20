@@ -36,4 +36,11 @@ public interface ITeacherService
     // Profile
     Task<TeacherProfileDto> GetProfileAsync(Guid teacherId);
     Task UpdateProfileAsync(Guid teacherId, UpdateTeacherProfileRequestDto request);
+
+    // Courses & Classes
+    Task<List<TeacherCourseDto>> GetCoursesAsync(Guid teacherId);
+    Task<List<TeacherClassDto>> GetClassesAsync(Guid teacherId);
+
+    // Announcements
+    Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync();
 }

@@ -18,7 +18,8 @@
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);j.suites[0].suites[0].specs.filter\\(s=>s.tests[0].results[0].status!=='passed'\\).forEach\\(s=>{console.log\\('FAIL:',s.title\\);console.log\\(s.tests[0].results[0].error?.message?.substring\\(0,400\\)\\);console.log\\('---'\\);}\\);}\\)\")",
       "Bash(grep -c \"test\\(\" /c/Users/Win11/source/repos/CodexIQ.Api/ui/exam-grader/e2e/*.spec.ts)",
       "Bash(dotnet restore:*)",
-      "Bash(dotnet run:*)"
+      "Bash(dotnet run:*)",
+      "Bash(grep -E \"\\\\.cs$\")"
     ]
   }
 }

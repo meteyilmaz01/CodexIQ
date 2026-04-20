@@ -10,4 +10,5 @@ export const studentApi = {
   getResults: (params: { search?: string; course?: string; sortBy?: string; page?: number; pageSize?: number }) =>
     api.get("/student/results", { params }).then((r) => r.data),
   getResultDetail: (id: string) => api.get(`/student/results/${id}`).then((r) => r.data),
+  getAnnouncements: () => api.get("/student/announcements").then((r) => r.data),
 };

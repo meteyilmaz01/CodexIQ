@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import HeaderActions from "../../components/HeaderActions";
-import { Layout, Menu, Avatar, Badge, Dropdown, Typography, Drawer, Grid } from "antd";
+import { Layout, Menu, Avatar, Badge, Dropdown, Typography, Drawer, Grid, Popover } from "antd";
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -17,6 +17,7 @@ import {
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
+import { studentApi } from "../../api/studentApi";
 
 const { Sider, Header, Content } = Layout;
 const { Text } = Typography;
@@ -59,6 +60,43 @@ const StudentLayout = () => {
   const handleUserMenu = (info: { key: string }) => {
     if (info.key === "profile") handleNavigate("/student/profile");
     if (info.key === "logout") handleNavigate("/login");
+  };
+
+  const AnnouncementsPopover = () => {
+    const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [open, setOpen] = useState(false);
+
+    const loadAnnouncements = async () => {
+      try {
+        const res = await studentApi.getAnnouncements();
+        const data = res.data || res;
+        setAnnouncements(Array.isArray(data) ? data : data.items || []);
+      } catch { setAnnouncements([]); }
+    };
+
+    useEffect(() => { loadAnnouncements(); }, []);
+
+    const content = (
+      <div style={{ width: 300, maxHeight: 400, overflowY: "auto" }}>
+        {announcements.length === 0
+          ? <Text style={{ color: colors.textMuted }}>Duyuru yok</Text>
+          : announcements.map((a: any) => (
+              <div key={a.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: colors.borderSubtle }}>
+                <Text style={{ color: colors.textSecondary, fontWeight: 600, display: "block" }}>{a.title}</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 12 }}>{a.content}</Text>
+              </div>
+            ))
+        }
+      </div>
+    );
+
+    return (
+      <Popover content={content} title="Duyurular" trigger="click" open={open} onOpenChange={setOpen} placement="bottomRight">
+        <Badge count={announcements.length} size="small" style={{ cursor: "pointer" }}>
+          <BellOutlined style={{ fontSize: 18, color: colors.textSubtle, cursor: "pointer" }} />
+        </Badge>
+      </Popover>
+    );
   };
 
   const sidebarContent = (
@@ -215,9 +253,7 @@ const StudentLayout = () => {
 
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <HeaderActions />
-            <Badge count={3} size="small">
-              <BellOutlined style={{ fontSize: 18, color: colors.textSubtle, cursor: "pointer" }} />
-            </Badge>
+            <AnnouncementsPopover />
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenu }} placement="bottomRight">
               <Avatar
                 size={34}

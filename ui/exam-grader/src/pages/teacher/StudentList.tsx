@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Card, Table, Tag, Input, Select, Typography, Avatar, Progress, Spin } from "antd";
-import { SearchOutlined, FilterOutlined, MessageOutlined } from "@ant-design/icons";
+import { Card, Table, Tag, Input, Select, Typography, Avatar, Progress } from "antd";
+import { SearchOutlined, MessageOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
@@ -13,6 +13,7 @@ const StudentListPage = () => {
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const colors = useThemeColors();
   const t = useT();
@@ -27,7 +28,16 @@ const StudentListPage = () => {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchStudents(); }, []);
+  const fetchClasses = async () => {
+    try {
+      const res = await teacherApi.getClasses();
+      const data = res.data || res;
+      const items = Array.isArray(data) ? data : data.items || [];
+      setClasses(items.map((c: any) => ({ value: c.id, label: c.name })));
+    } catch { setClasses([]); }
+  };
+
+  useEffect(() => { fetchStudents(); fetchClasses(); }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchStudents(classFilter || undefined), 300);
@@ -35,8 +45,6 @@ const StudentListPage = () => {
   }, [classFilter]);
 
   const getScoreColor = (s: number) => { if (s >= 85) return "#52c41a"; if (s >= 70) return colors.accent; if (s >= 50) return "#faad14"; return "#ff4d4f"; };
-
-  const classList = [...new Set(students.map((s: any) => s.class || s.className).filter(Boolean))];
 
   const filtered = students.filter((s: any) => {
     const name = s.name || s.fullName || `${s.firstName || ""} ${s.lastName || ""}`;
@@ -88,7 +96,7 @@ const StudentListPage = () => {
       <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16 }} styles={{ body: { padding: "12px 16px" } }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <Input placeholder={t("searchStudent")} prefix={<SearchOutlined style={{ color: colors.textDimmed }} />} value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 250 }} />
-          <Select placeholder={t("class")} allowClear onChange={(v) => setClassFilter(v)} options={classList.map((c) => ({ label: c, value: c }))} style={{ minWidth: 200 }} />
+          <Select placeholder={t("class")} allowClear onChange={(v) => setClassFilter(v)} options={classes} style={{ minWidth: 200 }} />
         </div>
       </Card>
 

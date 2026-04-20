@@ -265,5 +265,35 @@ namespace CodexIQ.Infrastructure.Repository
 
             return (student, averageScore, examCount);
         }
+
+        public async Task<List<TeacherCourseDto>> GetCoursesByTeacherIdAsync(Guid teacherId)
+        {
+            return await _context.Courses
+                .Include(c => c.Class)
+                .Where(c => c.Class.TeacherId == teacherId && c.IsActive)
+                .OrderBy(c => c.Name)
+                .Select(c => new TeacherCourseDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    ClassName = c.Class.Name,
+                    ClassId = c.ClassId
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<TeacherClassDto>> GetClassesByTeacherIdAsync(Guid teacherId)
+        {
+            return await _context.Classrooms
+                .Where(c => c.TeacherId == teacherId && c.IsActive)
+                .OrderBy(c => c.Name)
+                .Select(c => new TeacherClassDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    StudentCount = c.StudentClasses.Count
+                })
+                .ToListAsync();
+        }
     }
 }

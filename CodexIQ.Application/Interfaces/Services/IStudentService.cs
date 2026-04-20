@@ -26,5 +26,7 @@ namespace CodexIQ.Application.Interfaces.Services
 
         Task<StudentProfileDto> GetProfileAsync(Guid studentId);
         Task UpdateProfileAsync(Guid studentId, UpdateProfileRequestDto request);
+
+        Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync();
     }
 }

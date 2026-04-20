@@ -6,7 +6,7 @@ export const teacherApi = {
   getCourseAverages: () => api.get("/teacher/course-averages").then((r) => r.data),
   getQueueStatus: () => api.get("/teacher/queue-status").then((r) => r.data),
 
-  createExam: (data: { name: string; courseId: string; language?: string; codePurpose?: string }) =>
+  createExam: (data: { name: string; courseId: string; programmingLanguage?: string; codePurpose?: string }) =>
     api.post("/teacher/exams", data).then((r) => r.data),
   uploadPapers: (examId: string, files: File[]) => {
     const formData = new FormData();
@@ -42,4 +42,8 @@ export const teacherApi = {
   getProfile: () => api.get("/teacher/profile").then((r) => r.data),
   updateProfile: (data: { firstName: string; lastName: string; email: string }) =>
     api.put("/teacher/profile", data).then((r) => r.data),
+
+  getCourses: () => api.get("/teacher/courses").then((r) => r.data),
+  getClasses: () => api.get("/teacher/classes").then((r) => r.data),
+  getAnnouncements: () => api.get("/teacher/announcements").then((r) => r.data),
 };

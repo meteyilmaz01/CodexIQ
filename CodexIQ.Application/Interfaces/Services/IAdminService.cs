@@ -34,4 +34,8 @@ public interface IAdminService
     Task<List<AdminActivityDto>> GetLogsAsync(int take);
     Task<AdminApiCostsDto> GetApiCostsAsync();
     Task<AdminQueueDto> GetQueueAsync();
+
+    Task<List<AdminUserListItemDto>> GetStudentsByClassIdAsync(Guid classId);
+    Task AssignStudentsToClassAsync(Guid classId, AssignStudentsRequestDto request);
+    Task RemoveStudentFromClassAsync(Guid classId, Guid studentId);
 }

@@ -93,7 +93,8 @@ public class AdminService : IAdminService
             Email = request.Email,
             Role = request.Role,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
-            IsActive = true 
+            StudentNumber = request.StudentNumber,
+            IsActive = true
         };
 
         await _unitOfWork.User.AddAsync(user);
@@ -275,5 +276,25 @@ public class AdminService : IAdminService
         }
 
         return queueDto;
+    }
+
+    public async Task<List<AdminUserListItemDto>> GetStudentsByClassIdAsync(Guid classId)
+    {
+        return await _unitOfWork.Admin.GetStudentsByClassIdAsync(classId);
+    }
+
+    public async Task AssignStudentsToClassAsync(Guid classId, AssignStudentsRequestDto request)
+    {
+        var classEntity = await _unitOfWork.Admin.GetClassEntityByIdAsync(classId);
+        if (classEntity == null) throw new CodexIQ.Application.Exceptions.NotFoundException("Sınıf bulunamadı");
+
+        await _unitOfWork.Admin.AssignStudentsToClassAsync(classId, request.StudentIds);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task RemoveStudentFromClassAsync(Guid classId, Guid studentId)
+    {
+        await _unitOfWork.Admin.RemoveStudentFromClassAsync(classId, studentId);
+        await _unitOfWork.SaveChangesAsync();
     }
 }

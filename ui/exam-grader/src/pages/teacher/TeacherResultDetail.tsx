@@ -96,7 +96,11 @@ const TeacherResultDetail = () => {
 
   const syntaxErrors = data.syntax_hatalari || data.syntaxErrors || [];
   const logicErrors = data.mantik_hatalari || data.logicErrors || [];
-  const modelScores = data.model_scores || data.modelScores || {};
+  // modelScores can arrive as an array [{modelName, score}] or as an object {model: score}
+  const rawModelScores = data.model_scores || data.modelScores || [];
+  const modelScores: Record<string, number> = Array.isArray(rawModelScores)
+    ? Object.fromEntries(rawModelScores.map((ms: any) => [ms.modelName || ms.model || "model", ms.score ?? ms.Score ?? 0]))
+    : rawModelScores;
   const code = data.code || "";
   const codePurpose = data.code_purpose || data.codePurpose || "";
 

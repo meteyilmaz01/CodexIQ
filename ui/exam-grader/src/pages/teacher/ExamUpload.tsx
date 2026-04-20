@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
 import { teacherApi } from "../../api/teacherApi";
-import { adminApi } from "../../api/adminApi";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -37,9 +36,9 @@ const ExamUpload = () => {
   useEffect(() => {
     const loadCourses = async () => {
       try {
-        const res = await adminApi.getCourses({ pageSize: 100 });
+        const res = await teacherApi.getCourses();
         const data = res.data || res;
-        const items = data.items || data.results || (Array.isArray(data) ? data : []);
+        const items = Array.isArray(data) ? data : data.items || data.results || [];
         setCourses(items.map((c: any) => ({ value: c.id, label: c.name })));
       } catch { /* use empty */ }
     };
@@ -64,7 +63,7 @@ const ExamUpload = () => {
 
     try {
       // Step 1: Create exam
-      const examRes = await teacherApi.createExam({ name: examName, courseId: selectedCourse, language, codePurpose });
+      const examRes = await teacherApi.createExam({ name: examName, courseId: selectedCourse, programmingLanguage: language, codePurpose });
       const examData = examRes.data || examRes;
       const examId = examData.examId || examData.id;
       setUploadProgress(30);

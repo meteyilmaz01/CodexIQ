@@ -148,28 +148,44 @@ namespace CodexIQ.Infrastructure.Messaging
                 Console.WriteLine($"[CONSUMER] FinalEvaluation güncellendi: {finalScore}/100");
             }
 
-            // ── 4. Öğrenci eşleştirme (OCR adına göre) ────────────────────────
-            if (paper.StudentId == null && message.StudentInfo != null
-                && !string.IsNullOrWhiteSpace(message.StudentInfo.FirstName)
-                && !string.IsNullOrWhiteSpace(message.StudentInfo.LastName))
+            // ── 4. Öğrenci eşleştirme ─────────────────────────────────────────
+            if (paper.StudentId == null && message.StudentInfo != null)
             {
-                var firstName = message.StudentInfo.FirstName.Trim();
-                var lastName  = message.StudentInfo.LastName.Trim();
+                User? matchedStudent = null;
 
-                var matchedStudent = await _dbContext.Users
-                    .Where(u => u.FirstName.ToLower() == firstName.ToLower()
-                             && u.LastName.ToLower()  == lastName.ToLower())
-                    .FirstOrDefaultAsync();
+                // Önce öğrenci numarasıyla eşleştir (daha güvenilir)
+                if (!string.IsNullOrWhiteSpace(message.StudentInfo.StudentNumber))
+                {
+                    var studentNumber = message.StudentInfo.StudentNumber.Trim();
+                    matchedStudent = await _dbContext.Users
+                        .Where(u => u.StudentNumber == studentNumber)
+                        .FirstOrDefaultAsync();
+
+                    if (matchedStudent != null)
+                        Console.WriteLine($"[CONSUMER] Öğrenci numarasıyla eşleştirildi: {studentNumber} → {matchedStudent.Id}");
+                }
+
+                // Öğrenci numarasıyla bulunamazsa isimle eşleştir
+                if (matchedStudent == null
+                    && !string.IsNullOrWhiteSpace(message.StudentInfo.FirstName)
+                    && !string.IsNullOrWhiteSpace(message.StudentInfo.LastName))
+                {
+                    var firstName = message.StudentInfo.FirstName.Trim();
+                    var lastName  = message.StudentInfo.LastName.Trim();
+
+                    matchedStudent = await _dbContext.Users
+                        .Where(u => u.FirstName.ToLower() == firstName.ToLower()
+                                 && u.LastName.ToLower()  == lastName.ToLower())
+                        .FirstOrDefaultAsync();
+
+                    if (matchedStudent != null)
+                        Console.WriteLine($"[CONSUMER] İsimle eşleştirildi: {firstName} {lastName} → {matchedStudent.Id}");
+                    else
+                        Console.WriteLine($"[CONSUMER][UYARI] Öğrenci bulunamadı: '{firstName} {lastName}' — StudentId null kalıyor");
+                }
 
                 if (matchedStudent != null)
-                {
                     paper.StudentId = matchedStudent.Id;
-                    Console.WriteLine($"[CONSUMER] Öğrenci eşleştirildi: {firstName} {lastName} → {matchedStudent.Id}");
-                }
-                else
-                {
-                    Console.WriteLine($"[CONSUMER][UYARI] Öğrenci bulunamadı: '{firstName} {lastName}' — StudentId null kalıyor");
-                }
             }
 
             // ── 5. Kağıt durumunu güncelle ─────────────────────────────────────

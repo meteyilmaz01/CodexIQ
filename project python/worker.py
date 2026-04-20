@@ -13,13 +13,17 @@ Akış:
 """
 
 import asyncio
+import io
 import json
 import os
 import sys
 import time
 import threading
 import pika
-from PIL import Image
+from PIL import Image, ImageFile
+
+# Truncated JPEG/PNG dosyalarını da oku (son birkaç byte eksik olsa bile)
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 from google import genai
 from google.genai import types
 from openai import AsyncOpenAI
@@ -82,30 +86,32 @@ class OCRReader:
     def __init__(self):
         self.client = genai.Client(api_key=GOOGLE_API_KEY)
 
-    async def extract_student_info(self, image: Image.Image) -> dict:
+    async def extract_student_info(self, image_bytes: bytes) -> dict:
         """Görselin sağ üst köşesinden öğrenci bilgisini çıkarır"""
         print("  [OCR] Öğrenci bilgisi okunuyor...")
 
         prompt = """
         Look at the TOP-RIGHT corner of this handwritten exam paper image.
         Students write their name, surname, and student number there.
-        
+
         Extract this information and return ONLY a JSON object:
         {
             "first_name": "student's first name",
-            "last_name": "student's last name", 
+            "last_name": "student's last name",
             "student_number": "student number/ID"
         }
-        
+
         If you cannot find any of these, use empty string "".
         Return ONLY the JSON, no other text.
         """
 
         try:
+            image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+
             def _run():
                 return self.client.models.generate_content(
                     model='gemini-2.5-flash',
-                    contents=[image, prompt]
+                    contents=[image_part, prompt]
                 ).text
 
             result = await asyncio.to_thread(_run)
@@ -117,12 +123,12 @@ class OCRReader:
             print(f"  [OCR] Öğrenci bilgisi okunamadı: {e}")
             return {"first_name": "", "last_name": "", "student_number": ""}
 
-    async def extract_code(self, image: Image.Image) -> str:
+    async def extract_code(self, image_bytes: bytes) -> str:
         """Görseldeki el yazısı kodu okur"""
         print("  [OCR] El yazısı kod okunuyor...")
 
         prompt = """
-        You are a strict, high-precision data transcription engine. 
+        You are a strict, high-precision data transcription engine.
         Your task is to transcribe handwritten programming code from an image exactly as it appears, with no alterations.
 
         # Critical Constraints
@@ -136,10 +142,12 @@ class OCRReader:
         """
 
         try:
+            image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+
             def _run():
                 return self.client.models.generate_content(
                     model='gemini-2.5-flash',
-                    contents=[image, prompt]
+                    contents=[image_part, prompt]
                 ).text
 
             result = await asyncio.to_thread(_run)
@@ -479,17 +487,25 @@ class CodexIQWorker:
             return
 
         try:
-            image = Image.open(full_path)
+            # PIL ile aç (LOAD_TRUNCATED_IMAGES=True sayesinde truncated JPEG'i tolere eder)
+            pil_image = Image.open(full_path)
+            pil_image.load()  # Tüm piksel verisini belleğe oku
+            # PNG olarak BytesIO'ya yaz: artık eksiksiz, bellekte, dosya bağlantısı yok
+            buf = io.BytesIO()
+            pil_image.convert("RGB").save(buf, format="PNG")
+            image_bytes = buf.getvalue()
+            print(f"  [Görsel] {len(image_bytes)//1024} KB PNG belleğe alındı")
         except Exception as e:
             print(f"  [HATA] Görsel açılamadı: {e}")
             self._send_error(exam_paper_id, exam_id, f"Görsel açılamadı: {e}")
             return
 
         # 2. OCR — Öğrenci bilgisi + Kod okuma (paralel)
+        # Her iki task aynı byte dizisini okur; bytes değişmez (immutable) olduğu için thread-safe
         print(f"  [2/4] OCR işlemi başlıyor...")
         student_info, extracted_code = await asyncio.gather(
-            self.ocr.extract_student_info(image),
-            self.ocr.extract_code(image)
+            self.ocr.extract_student_info(image_bytes),
+            self.ocr.extract_code(image_bytes)
         )
 
         if not extracted_code:

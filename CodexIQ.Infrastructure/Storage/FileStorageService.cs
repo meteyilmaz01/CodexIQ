@@ -29,8 +29,11 @@ namespace CodexIQ.Infrastructure.Storage
             var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
             var filePath = Path.Combine(folderPath, fileName);
 
-            using var stream = new FileStream(filePath, FileMode.Create);
+            await using var stream = new FileStream(
+                filePath, FileMode.Create, FileAccess.Write,
+                FileShare.None, bufferSize: 4096, useAsync: true);
             await file.CopyToAsync(stream);
+            await stream.FlushAsync(); // buffer'daki son byte'ları diske yaz
 
             return Path.Combine(folder, fileName);
         }

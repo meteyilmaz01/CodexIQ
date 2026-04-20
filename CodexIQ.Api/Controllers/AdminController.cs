@@ -207,4 +207,27 @@ public class AdminController : ControllerBase
         _logger.LogInformation("Kuyruk durumu görüntülendi");
         return Ok(await _adminService.GetQueueAsync());
     }
+
+    [HttpGet("classes/{classId:guid}/students")]
+    public async Task<IActionResult> GetClassStudents(Guid classId)
+    {
+        _logger.LogInformation("Sınıf öğrencileri görüntülendi (ClassId: {ClassId})", classId);
+        return Ok(await _adminService.GetStudentsByClassIdAsync(classId));
+    }
+
+    [HttpPost("classes/{classId:guid}/students")]
+    public async Task<IActionResult> AssignStudents(Guid classId, [FromBody] AssignStudentsRequestDto request)
+    {
+        await _adminService.AssignStudentsToClassAsync(classId, request);
+        _logger.LogInformation("{Count} öğrenci sınıfa atandı (ClassId: {ClassId})", request.StudentIds.Count, classId);
+        return Ok(new { success = true, message = $"{request.StudentIds.Count} öğrenci sınıfa atandı" });
+    }
+
+    [HttpDelete("classes/{classId:guid}/students/{studentId:guid}")]
+    public async Task<IActionResult> RemoveStudentFromClass(Guid classId, Guid studentId)
+    {
+        await _adminService.RemoveStudentFromClassAsync(classId, studentId);
+        _logger.LogWarning("Öğrenci sınıftan çıkarıldı (ClassId: {ClassId}, StudentId: {StudentId})", classId, studentId);
+        return Ok(new { success = true, message = "Öğrenci sınıftan çıkarıldı" });
+    }
 }

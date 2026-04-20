@@ -196,5 +196,10 @@ namespace CodexIQ.Application.Services
             };
         }
 
+        public async Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync()
+        {
+            return await _unitOfWork.Admin.GetAnnouncementsAsync();
+        }
+
     }
 }

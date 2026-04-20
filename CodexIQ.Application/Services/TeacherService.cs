@@ -441,4 +441,19 @@ public class TeacherService : ITeacherService
         _unitOfWork.User.Update(user);
         await _unitOfWork.SaveChangesAsync();
     }
+
+    public async Task<List<TeacherCourseDto>> GetCoursesAsync(Guid teacherId)
+    {
+        return await _unitOfWork.Teacher.GetCoursesByTeacherIdAsync(teacherId);
+    }
+
+    public async Task<List<TeacherClassDto>> GetClassesAsync(Guid teacherId)
+    {
+        return await _unitOfWork.Teacher.GetClassesByTeacherIdAsync(teacherId);
+    }
+
+    public async Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync()
+    {
+        return await _unitOfWork.Admin.GetAnnouncementsAsync();
+    }
 }

@@ -107,4 +107,36 @@ public class StudentController : ControllerBase
             GetUserId(), search, course, sortBy, page, pageSize);
         return Ok(result);
     }
+
+    [HttpGet("announcements")]
+    public async Task<IActionResult> GetAnnouncements()
+    {
+        _logger.LogInformation("Öğrenci duyurular görüntülendi");
+        var result = await _studentService.GetAnnouncementsAsync();
+        return Ok(result);
+    }
+
+    [HttpPost("convert-code")]
+    public IActionResult ConvertCode([FromBody] ConvertCodeRequestDto request)
+    {
+        // TODO: Gemini entegrasyonu eklendiğinde gerçek OCR yapılacak
+        _logger.LogWarning("Kod çevirme servisi henüz entegre edilmemiş (Language: {Lang})", request.Language);
+        return StatusCode(503, new
+        {
+            success = false,
+            message = "Kod çevirme servisi şu an kullanılamıyor. Python worker'ın çalışır durumda olduğundan emin olun."
+        });
+    }
+
+    [HttpPost("run-code")]
+    public IActionResult RunCode([FromBody] RunCodeRequestDto request)
+    {
+        // TODO: Sandboxed kod çalıştırma ortamı eklendiğinde aktive edilecek
+        _logger.LogWarning("Kod çalıştırma servisi henüz entegre edilmemiş (Language: {Lang})", request.Language);
+        return StatusCode(503, new
+        {
+            success = false,
+            message = "Kod çalıştırma servisi şu an kullanılamıyor."
+        });
+    }
 }

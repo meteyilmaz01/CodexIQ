@@ -5,7 +5,7 @@ export const adminApi = {
 
   getUsers: (params: { search?: string; role?: string; isActive?: boolean; page?: number; pageSize?: number }) =>
     api.get("/admin/users", { params }).then((r) => r.data),
-  createUser: (data: { email: string; firstName: string; lastName: string; role: string; password: string }) =>
+  createUser: (data: { email: string; firstName: string; lastName: string; role: string; password: string; studentNumber?: string }) =>
     api.post("/admin/users", data).then((r) => r.data),
   updateUser: (id: string, data: any) => api.put(`/admin/users/${id}`, data).then((r) => r.data),
   updateUserStatus: (id: string, isActive: boolean) =>
@@ -20,11 +20,16 @@ export const adminApi = {
   deleteAnnouncement: (id: string) => api.delete(`/admin/announcements/${id}`).then((r) => r.data),
 
   getClasses: () => api.get("/admin/classes").then((r) => r.data),
-  createClass: (data: { name: string }) => api.post("/admin/classes", data).then((r) => r.data),
-  updateClass: (id: string, data: { name: string }) => api.put(`/admin/classes/${id}`, data).then((r) => r.data),
+  createClass: (data: { name: string; teacherId: string }) => api.post("/admin/classes", data).then((r) => r.data),
+  updateClass: (id: string, data: { name: string; teacherId: string }) => api.put(`/admin/classes/${id}`, data).then((r) => r.data),
   updateClassStatus: (id: string, isActive: boolean) =>
     api.patch(`/admin/classes/${id}/status`, { isActive }).then((r) => r.data),
   deleteClass: (id: string) => api.delete(`/admin/classes/${id}`).then((r) => r.data),
+  getClassStudents: (classId: string) => api.get(`/admin/classes/${classId}/students`).then((r) => r.data),
+  assignStudents: (classId: string, studentIds: string[]) => api.post(`/admin/classes/${classId}/students`, { studentIds }).then((r) => r.data),
+  removeStudentFromClass: (classId: string, studentId: string) => api.delete(`/admin/classes/${classId}/students/${studentId}`).then((r) => r.data),
+  getTeachers: () => api.get("/admin/users", { params: { role: "Teacher", pageSize: 200 } }).then((r) => r.data),
+  getAllStudents: () => api.get("/admin/users", { params: { role: "Student", pageSize: 500 } }).then((r) => r.data),
 
   getCourses: (params: { search?: string; classId?: string; isActive?: boolean; page?: number; pageSize?: number }) =>
     api.get("/admin/courses", { params }).then((r) => r.data),
