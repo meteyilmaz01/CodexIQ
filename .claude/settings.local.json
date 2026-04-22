@@ -19,7 +19,9 @@
       "Bash(grep -c \"test\\(\" /c/Users/Win11/source/repos/CodexIQ.Api/ui/exam-grader/e2e/*.spec.ts)",
       "Bash(dotnet restore:*)",
       "Bash(dotnet run:*)",
-      "Bash(grep -E \"\\\\.cs$\")"
+      "Bash(grep -E \"\\\\.cs$\")",
+      "Bash(curl -s https://wandbox.org/api/list.json)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); names=[c['name'] for c in d]; langs={}; [langs.setdefault\\(c['language'],[]\\).append\\(c['name']\\) for c in d]; [print\\(k,':',v[:5]\\) for k,v in sorted\\(langs.items\\(\\)\\)]\")"
     ]
   }
 }

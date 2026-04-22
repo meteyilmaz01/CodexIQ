@@ -48,7 +48,11 @@ const ExamResultDetail = () => {
 
   const syntaxErrors = data.syntax_hatalari || data.syntaxErrors || [];
   const logicErrors = data.mantik_hatalari || data.logicErrors || [];
-  const modelScores = data.model_scores || data.modelScores || {};
+  const rawModelScores = data.model_scores || data.modelScores || {};
+  // Backend array [{modelName, score}] döndürüyor; eski dict formatını da destekle
+  const modelScoresList: { name: string; score: number }[] = Array.isArray(rawModelScores)
+    ? rawModelScores.map((m: any) => ({ name: m.modelName ?? m.name ?? "model", score: Number(m.score) || 0 }))
+    : Object.entries(rawModelScores).map(([name, score]: [string, any]) => ({ name, score: Number(score) || 0 }));
   const totalScore = data.toplam_puan ?? data.totalScore ?? data.score ?? 0;
   const code = data.code || "";
   const codePurpose = data.code_purpose || data.codePurpose || "";
@@ -112,7 +116,7 @@ const ExamResultDetail = () => {
           <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, textAlign: "center" }} styles={{ body: { padding: 16 } }}>
             <Text style={{ color: colors.textMuted, fontSize: 12, display: "block", marginBottom: 4 }}>{t("modelAverage")}</Text>
             <span style={{ fontSize: 32, fontWeight: 700, color: colors.accent, fontFamily: "'JetBrains Mono'" }}>
-              {Object.values(modelScores).length > 0 ? Math.round(Object.values(modelScores).reduce((a: number, b: any) => a + Number(b), 0) / Object.values(modelScores).length) : "-"}
+              {modelScoresList.length > 0 ? Math.round(modelScoresList.reduce((a, b) => a + b.score, 0) / modelScoresList.length) : "-"}
             </span>
           </Card>
         </Col>
@@ -189,13 +193,13 @@ const ExamResultDetail = () => {
             </Card>
           )}
 
-          {Object.keys(modelScores).length > 0 && (
+          {modelScoresList.length > 0 && (
             <Card title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>{t("modelScores")} (Ensemble)</span>}
               style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }}>
-              {Object.entries(modelScores).map(([model, score]: [string, any]) => (
-                <div key={model} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <Tag style={{ borderRadius: 6, textTransform: "capitalize" }}>{model}</Tag>
-                  <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 600, color: getScoreColor(Number(score)) }}>{score}</span>
+              {modelScoresList.map((m, idx) => (
+                <div key={`${m.name}-${idx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <Tag style={{ borderRadius: 6, textTransform: "capitalize" }}>{m.name}</Tag>
+                  <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 600, color: getScoreColor(m.score) }}>{m.score}</span>
                 </div>
               ))}
               <Divider style={{ borderColor: colors.dividerColor, margin: "12px 0" }} />

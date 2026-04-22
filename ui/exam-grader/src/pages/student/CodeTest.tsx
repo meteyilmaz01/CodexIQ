@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, Typography, Button, Select, Tabs, Upload, message, Spin, Input, Row, Col, Tag } from "antd";
+import { Card, Typography, Button, Select, Tabs, Upload, message, Spin, Input, Row, Col, Tag, Divider, Collapse } from "antd";
 import {
   PlayCircleOutlined,
   UploadOutlined,
@@ -31,6 +31,7 @@ const CodeTest = () => {
   const [language, setLanguage] = useState("c");
   const [code, setCode] = useState(`#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}`);
   const [output, setOutput] = useState("");
+  const [result, setResult] = useState<any>(null);
   const [running, setRunning] = useState(false);
   const [activeTab, setActiveTab] = useState("editor");
 
@@ -45,6 +46,7 @@ const CodeTest = () => {
   const handleRun = async () => {
     setRunning(true);
     setOutput("");
+    setResult(null);
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5062/api'}/student/run-code`, {
         method: 'POST',
@@ -54,11 +56,14 @@ const CodeTest = () => {
         },
         body: JSON.stringify({ code, language }),
       });
-      if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      setOutput(data.output || data.data?.output || '');
+      if (!res.ok || data.success === false) {
+        setOutput('⚠ ' + (data.message || 'Kod test servisi kullanılamıyor.'));
+      } else {
+        setResult(data);
+      }
     } catch {
-      setOutput('⚠ Kod çalıştırma servisi şu an kullanılamıyor.\nLütfen daha sonra tekrar deneyin.');
+      setOutput('⚠ Kod test servisine ulaşılamadı. Python worker çalışıyor mu?');
     } finally {
       setRunning(false);
     }
@@ -187,24 +192,115 @@ const CodeTest = () => {
                 {/* Output Panel */}
                 <Col xs={24} lg={10}>
                   <Card
-                    title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>{t("output")}</span>}
-                    extra={output && <Button type="text" size="small" icon={<DeleteOutlined />} onClick={() => setOutput("")} style={{ color: colors.textMuted }} />}
+                    title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>Değerlendirme</span>}
+                    extra={(output || result) && <Button type="text" size="small" icon={<DeleteOutlined />} onClick={() => { setOutput(""); setResult(null); }} style={{ color: colors.textMuted }} />}
                     style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, height: "100%" }}
                   >
                     {running ? (
                       <div style={{ textAlign: "center", padding: "40px 0" }}>
                         <Spin indicator={<LoadingOutlined style={{ fontSize: 24, color: colors.accent }} />} />
-                        <Text style={{ display: "block", color: colors.textMuted, marginTop: 12 }}>{t("codeRunning")}</Text>
+                        <Text style={{ display: "block", color: colors.textMuted, marginTop: 12 }}>Jüri + hakem değerlendiriyor…</Text>
+                        <Text style={{ display: "block", color: colors.textDimmed, fontSize: 12, marginTop: 4 }}>~30-60 sn sürebilir</Text>
+                      </div>
+                    ) : result ? (
+                      <div>
+                        {/* Skor */}
+                        <div style={{ textAlign: "center", marginBottom: 16 }}>
+                          <div style={{ fontSize: 48, fontWeight: 700, fontFamily: "'JetBrains Mono'", color: result.totalScore >= 85 ? "#52c41a" : result.totalScore >= 50 ? "#faad14" : "#ff4d4f" }}>
+                            {result.totalScore}
+                            <span style={{ fontSize: 20, color: colors.textMuted }}> / 100</span>
+                          </div>
+                        </div>
+                        <Divider style={{ margin: "8px 0" }} />
+
+                        {/* Hakem özeti */}
+                        {result.hakemOzeti && (
+                          <div style={{ marginBottom: 12 }}>
+                            <Text strong style={{ color: colors.textPrimary, fontSize: 13 }}>Hakem Özeti</Text>
+                            <div style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap" }}>{result.hakemOzeti}</div>
+                          </div>
+                        )}
+
+                        {/* Genel değerlendirme */}
+                        {result.genelDegerlendirme && (
+                          <div style={{ marginBottom: 12 }}>
+                            <Text strong style={{ color: colors.textPrimary, fontSize: 13 }}>Genel Değerlendirme</Text>
+                            <div style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap" }}>{result.genelDegerlendirme}</div>
+                          </div>
+                        )}
+
+                        {/* Syntax Errors */}
+                        {result.syntaxErrors?.length > 0 && (
+                          <Collapse size="small" ghost items={[{
+                            key: "syntax",
+                            label: <span><Tag color="warning">Syntax</Tag> {result.syntaxErrors.length} hata</span>,
+                            children: (
+                              <div>{result.syntaxErrors.map((e: any, i: number) => (
+                                <div key={i} style={{ marginBottom: 8, paddingLeft: 8, borderLeft: "2px solid #faad14" }}>
+                                  <Text style={{ color: colors.textSecondary, fontSize: 12, display: "block" }}>
+                                    <b>Satır {e.satir || e.line}:</b> {e.aciklama || e.description}
+                                  </Text>
+                                  {(e.hint) && <Text style={{ color: colors.textMuted, fontSize: 12, fontStyle: "italic" }}>💡 {e.hint}</Text>}
+                                </div>
+                              ))}</div>
+                            )
+                          }]} />
+                        )}
+
+                        {/* Logic Errors */}
+                        {result.logicErrors?.length > 0 && (
+                          <Collapse size="small" ghost items={[{
+                            key: "logic",
+                            label: <span><Tag color="error">Mantık</Tag> {result.logicErrors.length} hata</span>,
+                            children: (
+                              <div>{result.logicErrors.map((e: any, i: number) => (
+                                <div key={i} style={{ marginBottom: 8, paddingLeft: 8, borderLeft: "2px solid #ff4d4f" }}>
+                                  <Text style={{ color: colors.textSecondary, fontSize: 12, display: "block" }}>
+                                    <b>Satır {e.satir || e.line}:</b> {e.aciklama || e.description}
+                                  </Text>
+                                  {(e.hint) && <Text style={{ color: colors.textMuted, fontSize: 12, fontStyle: "italic" }}>💡 {e.hint}</Text>}
+                                </div>
+                              ))}</div>
+                            )
+                          }]} />
+                        )}
+
+                        {/* Gelişim alanları */}
+                        {result.gelisimAlanlari?.length > 0 && (
+                          <Collapse size="small" ghost items={[{
+                            key: "gelisim",
+                            label: <span><Tag color="processing">Gelişim</Tag> {result.gelisimAlanlari.length} alan</span>,
+                            children: (
+                              <div>{result.gelisimAlanlari.map((g: any, i: number) => (
+                                <div key={i} style={{ marginBottom: 10, paddingLeft: 8, borderLeft: "2px solid #1890ff" }}>
+                                  <Text style={{ color: colors.textPrimary, fontSize: 12, display: "block" }}>
+                                    <b>{g.konu}</b> <Tag style={{ marginLeft: 4 }}>%{g.mevcut_seviye}</Tag>
+                                  </Text>
+                                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>{g.oneri}</Text>
+                                </div>
+                              ))}</div>
+                            )
+                          }]} />
+                        )}
+
+                        {/* Model skorları */}
+                        {result.modelScores && Object.keys(result.modelScores).length > 0 && (
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${colors.dividerColor}` }}>
+                            <Text style={{ color: colors.textMuted, fontSize: 11 }}>Jüri skorları: </Text>
+                            {Object.entries(result.modelScores).map(([m, s]: any) => (
+                              <Tag key={m} style={{ fontSize: 11 }}>{m}: {s}</Tag>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : output ? (
-                      <pre style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: output.startsWith('⚠') ? "#faad14" : "#52c41a", margin: 0, whiteSpace: "pre-wrap" }}>
-                        <CheckCircleOutlined style={{ marginRight: 8, color: "#52c41a" }} />
+                      <pre style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "#faad14", margin: 0, whiteSpace: "pre-wrap" }}>
                         {output}
                       </pre>
                     ) : (
                       <div style={{ textAlign: "center", padding: "40px 0" }}>
                         <PlayCircleOutlined style={{ fontSize: 32, color: colors.textDimmed }} />
-                        <Text style={{ display: "block", color: colors.textMuted, marginTop: 12 }}>{t("clickRunToExecute")}</Text>
+                        <Text style={{ display: "block", color: colors.textMuted, marginTop: 12 }}>Kodunu yazıp "Çalıştır"a bas — jüri + hakem puanlayacak</Text>
                       </div>
                     )}
                   </Card>

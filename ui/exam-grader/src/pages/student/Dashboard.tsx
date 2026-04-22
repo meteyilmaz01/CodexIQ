@@ -59,10 +59,10 @@ const Dashboard = () => {
   }
 
   const statCards = [
-    { title: t("examAverage"), value: stats?.examAverage ?? "-", suffix: "/ 100", icon: <TrophyOutlined />, color: "#0ff", trend: stats?.averageTrend },
-    { title: t("lastExam"), value: stats?.lastExamScore ?? "-", suffix: "/ 100", icon: <RiseOutlined />, color: "#52c41a", trend: stats?.lastExamTrend },
-    { title: t("totalExams"), value: stats?.totalExams ?? 0, suffix: t("exams"), icon: <CodeOutlined />, color: "#1890ff", trend: "" },
-    { title: t("codeTests"), value: stats?.codeTests ?? 0, suffix: t("tests"), icon: <ClockCircleOutlined />, color: "#faad14", trend: "" },
+    { title: t("examAverage"), value: stats?.averageScore ?? stats?.examAverage ?? "-", suffix: "/ 100", icon: <TrophyOutlined />, color: "#0ff", trend: stats?.averageTrend },
+    { title: t("lastExam"), value: stats?.lastScored ?? stats?.lastExamScore ?? "-", suffix: "/ 100", icon: <RiseOutlined />, color: "#52c41a", trend: stats?.lastExamTrend },
+    { title: t("totalExams"), value: stats?.totalExamsTaken ?? stats?.totalExams ?? 0, suffix: t("exams"), icon: <CodeOutlined />, color: "#1890ff", trend: "" },
+    { title: t("codeTests"), value: stats?.codeTestCount ?? stats?.codeTests ?? 0, suffix: t("tests"), icon: <ClockCircleOutlined />, color: "#faad14", trend: "" },
   ];
 
   return (
