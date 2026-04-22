@@ -8,10 +8,7 @@ using System.Text.Json;
 
 namespace CodexIQ.Infrastructure.Messaging
 {
-    /// <summary>
-    /// Python worker'dan gelen per-kağıt sonuçları işler.
-    /// Her mesaj tek bir ExamPaper'ın sonucunu içerir (ExamPaperId ile eşleştirilir).
-    /// </summary>
+
     public class ExamResultConsumer : IConsumer<ExamResultPublished>
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -33,7 +30,6 @@ namespace CodexIQ.Infrastructure.Messaging
             Console.WriteLine($"[CONSUMER] Status:      {message.Status}");
             Console.WriteLine($"[CONSUMER] ═══════════════════════════════════════");
 
-            // ExamPaper'ı ilişkileriyle getir
             var paper = await _dbContext.ExamPapers
                 .Include(p => p.ExtractedCode)
                 .Include(p => p.AIModelResults)
@@ -46,10 +42,8 @@ namespace CodexIQ.Infrastructure.Messaging
                 return;
             }
 
-            // Başarısız mesajları da işle (failed status)
             bool isFailed = message.Status == "failed";
 
-            // ── 1. OCR ile okunan kodu kaydet ──────────────────────────────────
             if (!string.IsNullOrWhiteSpace(message.ExtractedCode))
             {
                 if (paper.ExtractedCode == null)
@@ -69,7 +63,6 @@ namespace CodexIQ.Infrastructure.Messaging
                 }
             }
 
-            // ── 2. Model skorlarını kaydet ──────────────────────────────────────
             if (message.ModelScores != null && !isFailed)
             {
                 var modelScoreMap = new Dictionary<string, int>
@@ -79,7 +72,6 @@ namespace CodexIQ.Infrastructure.Messaging
                     { "Ollama Llama 3.1", message.ModelScores.OllamaLlama }
                 };
 
-                // Mevcut model sonuçlarını temizle (yeniden değerlendirme durumu)
                 if (paper.AIModelResults.Any())
                 {
                     _dbContext.AIModelResults.RemoveRange(paper.AIModelResults);
@@ -98,15 +90,14 @@ namespace CodexIQ.Infrastructure.Messaging
                 Console.WriteLine($"[CONSUMER] Model skorları kaydedildi: Gemini={message.ModelScores.Gemini}, Groq={message.ModelScores.GroqLlama}, Ollama={message.ModelScores.OllamaLlama}");
             }
 
-            // ── 3. Final değerlendirmeyi kaydet ────────────────────────────────
             var eval = message.Evaluation;
             int finalScore = isFailed ? 0 : (eval?.ToplamPuan ?? 0);
 
-            // Hata listelerini CodeErrorDto formatına dönüştür (frontend bunu kullanıyor)
+   
             var syntaxErrorsJson = SerializeErrors(eval?.SyntaxHatalari ?? new List<HataDetayiMessage>());
             var logicErrorsJson  = SerializeErrors(eval?.MantikHatalari ?? new List<HataDetayiMessage>());
 
-            // Geri bildirimi birleştir
+       
             var feedback = isFailed
                 ? (eval?.HakemOzeti ?? "Değerlendirme başarısız")
                 : $"{eval?.HakemOzeti ?? ""}\n\n{eval?.GenelDegerlendirme ?? ""}".Trim();
@@ -133,7 +124,7 @@ namespace CodexIQ.Infrastructure.Messaging
             }
             else
             {
-                // Öğretmen override etmediyse güncelle
+          
                 if (!paper.FinalEvaluation.IsOverridden)
                 {
                     paper.FinalEvaluation.FinalScore    = finalScore;
@@ -148,12 +139,12 @@ namespace CodexIQ.Infrastructure.Messaging
                 Console.WriteLine($"[CONSUMER] FinalEvaluation güncellendi: {finalScore}/100");
             }
 
-            // ── 4. Öğrenci eşleştirme ─────────────────────────────────────────
+        
             if (paper.StudentId == null && message.StudentInfo != null)
             {
                 User? matchedStudent = null;
 
-                // Önce öğrenci numarasıyla eşleştir (daha güvenilir)
+        
                 if (!string.IsNullOrWhiteSpace(message.StudentInfo.StudentNumber))
                 {
                     var studentNumber = message.StudentInfo.StudentNumber.Trim();
@@ -165,7 +156,7 @@ namespace CodexIQ.Infrastructure.Messaging
                         Console.WriteLine($"[CONSUMER] Öğrenci numarasıyla eşleştirildi: {studentNumber} → {matchedStudent.Id}");
                 }
 
-                // Öğrenci numarasıyla bulunamazsa isimle eşleştir
+        
                 if (matchedStudent == null
                     && !string.IsNullOrWhiteSpace(message.StudentInfo.FirstName)
                     && !string.IsNullOrWhiteSpace(message.StudentInfo.LastName))
@@ -188,10 +179,10 @@ namespace CodexIQ.Infrastructure.Messaging
                     paper.StudentId = matchedStudent.Id;
             }
 
-            // ── 5. Kağıt durumunu güncelle ─────────────────────────────────────
+      
             paper.Status = isFailed ? EvaluationStatus.Failed : EvaluationStatus.Completed;
 
-            // ── 6. Kaydet ──────────────────────────────────────────────────────
+     
             try
             {
                 await _unitOfWork.SaveChangesAsync();
@@ -204,9 +195,7 @@ namespace CodexIQ.Infrastructure.Messaging
             }
         }
 
-        /// <summary>
-        /// Python HataDetayi listesini frontend'in beklediği CodeErrorDto JSON formatına dönüştürür.
-        /// </summary>
+        
         private static string SerializeErrors(List<HataDetayiMessage> hatalar)
         {
             if (hatalar == null || !hatalar.Any())
@@ -226,7 +215,6 @@ namespace CodexIQ.Infrastructure.Messaging
         private static int TryParseLineNumber(string satir)
         {
             if (string.IsNullOrWhiteSpace(satir)) return 0;
-            // "Line 3", "3", "satır 5", "5." gibi formatları dene
             var digits = new string(satir.Where(char.IsDigit).ToArray());
             return int.TryParse(digits, out var n) ? n : 0;
         }

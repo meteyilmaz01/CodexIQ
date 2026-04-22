@@ -2,12 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace CodexIQ.Infrastructure.Messaging
 {
-    /// <summary>
-    /// Python worker'ın exam-results-queue'ya gönderdiği mesaj formatı.
-    /// Her mesaj tek bir ExamPaper'ın sonucunu içerir.
-    /// camelCase → PascalCase: MassTransit UseRawJsonDeserializer ile case-insensitive eşleme yapar.
-    /// Türkçe alt çizgili alanlar için [JsonPropertyName] kullanılır.
-    /// </summary>
+
     public class ExamResultPublished
     {
         public Guid ExamPaperId { get; set; }

@@ -33,7 +33,7 @@ namespace CodexIQ.Infrastructure.Storage
                 filePath, FileMode.Create, FileAccess.Write,
                 FileShare.None, bufferSize: 4096, useAsync: true);
             await file.CopyToAsync(stream);
-            await stream.FlushAsync(); // buffer'daki son byte'ları diske yaz
+            await stream.FlushAsync(); 
 
             return Path.Combine(folder, fileName);
         }
@@ -50,10 +50,7 @@ namespace CodexIQ.Infrastructure.Storage
             return Path.Combine(folder, fileName);
         }
 
-        /// <summary>
-        /// PDF dosyasını sayfalara böler, her sayfayı ayrı JPEG olarak kaydeder.
-        /// Her sayfa = bir öğrencinin sınav kağıdı olarak işlenir.
-        /// </summary>
+
         public async Task<List<string>> SavePdfPagesAsync(byte[] pdfData, string folder)
         {
             var savedPaths = new List<string>();
@@ -64,7 +61,7 @@ namespace CodexIQ.Infrastructure.Storage
 
             using var pdfStream = new MemoryStream(pdfData);
 
-            // PDF'nin her sayfasını SKBitmap olarak al (300 DPI kalitesi)
+
             var renderOptions = new RenderOptions(Dpi: 200);
             int pageIndex = 0;
 
@@ -72,11 +69,11 @@ namespace CodexIQ.Infrastructure.Storage
             {
                 using (bitmap)
                 {
-                    // JPEG olarak encode et
+                
                     using var encoded = bitmap.Encode(SKEncodedImageFormat.Jpeg, 92);
                     var jpegBytes = encoded.ToArray();
 
-                    // Sayfa dosya adı: guid_sayfa{N}.jpg
+                
                     var fileName = $"{Guid.NewGuid()}_page{pageIndex + 1}.jpg";
                     var fullPath = Path.Combine(folderPath, fileName);
 

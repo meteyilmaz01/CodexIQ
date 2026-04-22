@@ -25,12 +25,11 @@ namespace CodexIQ.Infrastructure.Authentication
             var jwtSettings = _configuration.GetSection("Jwt");
             var secretKey = jwtSettings["SecretKey"];
 
-            // 1. Şifreleme algoritması ve anahtarı ayarlanıyor 
+     
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            // 2. Token'ın içine gömülecek "herkese açık" veriler (Claims)
-            // DİKKAT: Buraya asla şifre gibi gizli veriler konmaz!
+      
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -40,7 +39,7 @@ namespace CodexIQ.Infrastructure.Authentication
                 new Claim("LastName", user.LastName)
             };
 
-            // 3. Token'ın kendisi oluşturuluyor
+       
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
@@ -48,7 +47,7 @@ namespace CodexIQ.Infrastructure.Authentication
                 expires: DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["ExpirationInMinutes"]!)),
                 signingCredentials: credentials);
 
-            // 4. Token metin (string) formatına çevrilip geri dönülüyor
+      
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
