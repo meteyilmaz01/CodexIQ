@@ -219,6 +219,30 @@ public class TeacherController : ControllerBase
         return Ok(result);
     }
 
+    // Regrade Requests
+    [HttpGet("regrade-requests")]
+    public async Task<IActionResult> GetRegradeRequests()
+    {
+        var result = await _teacherService.GetPendingRegradeRequestsAsync(GetUserId());
+        _logger.LogInformation("İtiraz talepleri görüntülendi ({Count} bekliyor)", result.Count);
+        return Ok(result);
+    }
+
+    [HttpPost("regrade-requests/{requestId:guid}/resolve")]
+    public async Task<IActionResult> ResolveRegradeRequest(Guid requestId, [FromBody] ResolveRegradeRequestDto dto)
+    {
+        await _teacherService.ResolveRegradeRequestAsync(GetUserId(), requestId, dto);
+        _logger.LogInformation("İtiraz talebi sonuçlandırıldı (RequestId: {Id}, Karar: {Decision})", requestId, dto.Decision);
+        return Ok(new { success = true });
+    }
+
+    [HttpGet("regrade-requests/count")]
+    public async Task<IActionResult> GetRegradeRequestCount()
+    {
+        var count = await _teacherService.GetPendingRegradeCountAsync(GetUserId());
+        return Ok(new { count });
+    }
+
     [HttpPost("classes/{classId:guid}/regenerate-code")]
     public async Task<IActionResult> RegenerateJoinCode(Guid classId)
     {

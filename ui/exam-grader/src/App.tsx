@@ -22,6 +22,7 @@ import TeacherResultDetail from "./pages/teacher/TeacherResultDetail";
 import StudentList from "./pages/teacher/StudentList";
 import TeacherMessages from "./pages/teacher/TeacherMessages";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
+import RegradeRequests from "./pages/teacher/RegradeRequests";
 
 // Admin
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -72,6 +73,7 @@ function App() {
             <Route path="results" element={<TeacherResults />} />
             <Route path="results/:id" element={<TeacherResultDetail />} />
             <Route path="students" element={<StudentList />} />
+            <Route path="regrade-requests" element={<RegradeRequests />} />
             <Route path="messages" element={<TeacherMessages />} />
             <Route path="profile" element={<TeacherProfile />} />
           </Route>

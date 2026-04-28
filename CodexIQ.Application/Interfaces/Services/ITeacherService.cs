@@ -42,6 +42,11 @@ public interface ITeacherService
     Task<List<TeacherClassDto>> GetClassesAsync(Guid teacherId);
     Task<string> RegenerateJoinCodeAsync(Guid teacherId, Guid classId);
 
+    // Regrade Requests
+    Task<List<TeacherRegradeRequestListItemDto>> GetPendingRegradeRequestsAsync(Guid teacherId);
+    Task ResolveRegradeRequestAsync(Guid teacherId, Guid requestId, ResolveRegradeRequestDto dto);
+    Task<int> GetPendingRegradeCountAsync(Guid teacherId);
+
     // Announcements
     Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync();
 }

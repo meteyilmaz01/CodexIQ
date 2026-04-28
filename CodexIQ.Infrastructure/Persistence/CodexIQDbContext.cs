@@ -23,6 +23,7 @@ namespace CodexIQ.Infrastructure.Persistence
 
         public DbSet<RubricCriteria> RubricCriterias { get; set; }
         public DbSet<Log> Logs { get; set; }
+        public DbSet<RegradeRequest> RegradeRequests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -45,6 +46,24 @@ namespace CodexIQ.Infrastructure.Persistence
                 .WithMany()
                 .HasForeignKey(a => a.CreatedBy)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RegradeRequest>()
+                .HasOne(r => r.Student)
+                .WithMany()
+                .HasForeignKey(r => r.StudentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RegradeRequest>()
+                .HasOne(r => r.Teacher)
+                .WithMany()
+                .HasForeignKey(r => r.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RegradeRequest>()
+                .HasOne(r => r.ExamPaper)
+                .WithMany()
+                .HasForeignKey(r => r.ExamPaperId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Log>(entity =>
             {

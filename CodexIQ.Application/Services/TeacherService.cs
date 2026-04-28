@@ -564,6 +564,55 @@ public class TeacherService : ITeacherService
         return new string(Enumerable.Range(0, 6).Select(_ => chars[rng.Next(chars.Length)]).ToArray());
     }
 
+    public async Task<List<TeacherRegradeRequestListItemDto>> GetPendingRegradeRequestsAsync(Guid teacherId)
+    {
+        var requests = await _unitOfWork.Teacher.GetPendingRegradeRequestsAsync(teacherId);
+        return requests.Select(r => new TeacherRegradeRequestListItemDto
+        {
+            Id           = r.Id,
+            ExamPaperId  = r.ExamPaperId,
+            StudentName  = $"{r.Student.FirstName} {r.Student.LastName}",
+            ExamName     = r.ExamPaper.Exam.Name,
+            CourseName   = r.ExamPaper.Exam.Course.Name,
+            CurrentScore = r.ExamPaper.FinalEvaluation?.FinalScore ?? 0,
+            Reason       = r.Reason,
+            CreatedDate  = r.CreatedDate
+        }).ToList();
+    }
+
+    public async Task ResolveRegradeRequestAsync(Guid teacherId, Guid requestId, ResolveRegradeRequestDto dto)
+    {
+        var request = await _unitOfWork.Teacher.GetRegradeRequestByIdAsync(requestId, teacherId);
+        if (request == null)
+            throw new NotFoundException("İtiraz talebi bulunamadı.");
+
+        if (request.Status != RegradeStatus.Pending)
+            throw new ValidationException("Bu talep zaten sonuçlandırılmış.");
+
+        var approved = dto.Decision.Equals("Approved", StringComparison.OrdinalIgnoreCase);
+        request.Status      = approved ? RegradeStatus.Approved : RegradeStatus.Rejected;
+        request.TeacherNote = dto.TeacherNote;
+        request.ResolvedAt  = DateTime.UtcNow;
+
+        if (approved && dto.NewScore.HasValue)
+        {
+            var eval = request.ExamPaper.FinalEvaluation;
+            if (eval != null)
+            {
+                eval.OriginalScore = eval.IsOverridden ? eval.OriginalScore : eval.FinalScore;
+                eval.FinalScore    = dto.NewScore.Value;
+                eval.IsOverridden  = true;
+            }
+        }
+
+        await _unitOfWork.Teacher.UpdateRegradeRequestAsync(request);
+    }
+
+    public async Task<int> GetPendingRegradeCountAsync(Guid teacherId)
+    {
+        return await _unitOfWork.Teacher.GetPendingRegradeCountAsync(teacherId);
+    }
+
     public async Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync()
     {
         return await _unitOfWork.Admin.GetAnnouncementsAsync();

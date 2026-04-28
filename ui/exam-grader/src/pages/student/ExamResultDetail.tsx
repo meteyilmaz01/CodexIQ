@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Card, Typography, Tag, Button, Row, Col, Collapse, Tooltip, Divider, Switch, Spin, Alert } from "antd";
+import { Card, Typography, Tag, Button, Row, Col, Collapse, Tooltip, Divider, Switch, Spin, Alert, Modal, Input, message } from "antd";
 import {
   ArrowLeftOutlined, BulbOutlined, WarningOutlined, BugOutlined,
-  CheckCircleOutlined, InfoCircleOutlined, BookOutlined, EditOutlined,
+  CheckCircleOutlined, InfoCircleOutlined, BookOutlined, EditOutlined, SendOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
@@ -18,19 +18,41 @@ const ExamResultDetail = () => {
   const [revealedHints, setRevealedHints] = useState<Set<number>>(new Set());
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [regradeRequest, setRegradeRequest] = useState<any>(null);
+  const [regradeModalOpen, setRegradeModalOpen] = useState(false);
+  const [regradeReason, setRegradeReason] = useState("");
+  const [regradeLoading, setRegradeLoading] = useState(false);
   const colors = useThemeColors();
   const t = useT();
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await studentApi.getResultDetail(id!);
-        setData(res.data || res);
+        const [detailRes, regradeRes] = await Promise.all([
+          studentApi.getResultDetail(id!),
+          studentApi.getRegradeRequestStatus(id!).catch(() => null),
+        ]);
+        setData(detailRes.data || detailRes);
+        setRegradeRequest(regradeRes);
       } catch { /* handled */ }
       finally { setLoading(false); }
     };
     load();
   }, [id]);
+
+  const handleRegradeSubmit = async () => {
+    if (!regradeReason.trim()) return;
+    setRegradeLoading(true);
+    try {
+      await studentApi.createRegradeRequest(id!, regradeReason.trim());
+      message.success("İtiraz talebiniz iletildi. Öğretmeniniz inceleyecek.");
+      setRegradeModalOpen(false);
+      setRegradeReason("");
+      setRegradeRequest({ status: "Pending", createdDate: new Date().toISOString() });
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Hata oluştu");
+    } finally { setRegradeLoading(false); }
+  };
 
   const toggleHint = (index: number) => {
     setRevealedHints((prev) => {
@@ -88,10 +110,32 @@ const ExamResultDetail = () => {
           <Title level={4} style={{ color: colors.textPrimary, margin: 0, fontFamily: "'JetBrains Mono'" }}>{data.name || data.examName}</Title>
           <Text style={{ color: colors.textMuted }}>{data.course || data.courseName} • {data.date}</Text>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <BookOutlined style={{ color: educationMode ? colors.accent : colors.textMuted }} />
-          <Text style={{ color: educationMode ? colors.accent : colors.textMuted, fontSize: 13 }}>{t("educationMode")}</Text>
-          <Switch checked={educationMode} onChange={setEducationMode} />
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          {/* Regrade request button / status */}
+          {!regradeRequest && (
+            <Button
+              icon={<SendOutlined />}
+              onClick={() => setRegradeModalOpen(true)}
+              style={{ borderColor: colors.accentBorder, color: colors.accent }}
+            >
+              Notuma İtiraz Et
+            </Button>
+          )}
+          {regradeRequest?.status === "Pending" && (
+            <Tag color="processing" style={{ borderRadius: 6, padding: "4px 10px" }}>İtiraz Beklemede</Tag>
+          )}
+          {regradeRequest?.status === "Approved" && (
+            <Tag color="success" style={{ borderRadius: 6, padding: "4px 10px" }}>İtiraz Onaylandı</Tag>
+          )}
+          {regradeRequest?.status === "Rejected" && (
+            <Tag color="error" style={{ borderRadius: 6, padding: "4px 10px" }}>İtiraz Reddedildi</Tag>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <BookOutlined style={{ color: educationMode ? colors.accent : colors.textMuted }} />
+            <Text style={{ color: educationMode ? colors.accent : colors.textMuted, fontSize: 13 }}>{t("educationMode")}</Text>
+            <Switch checked={educationMode} onChange={setEducationMode} />
+          </div>
         </div>
       </div>
 
@@ -110,6 +154,26 @@ const ExamResultDetail = () => {
               {" "}'ye güncellendi.
             </span>
           }
+        />
+      )}
+
+      {regradeRequest?.status === "Rejected" && (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginBottom: 16, borderRadius: 10 }}
+          message="İtirazınız Reddedildi"
+          description={regradeRequest.teacherNote || "Öğretmen bir gerekçe belirtmedi."}
+        />
+      )}
+
+      {regradeRequest?.status === "Approved" && (
+        <Alert
+          type="success"
+          showIcon
+          style={{ marginBottom: 16, borderRadius: 10 }}
+          message="İtirazınız Onaylandı"
+          description={regradeRequest.teacherNote || "Öğretmeniniz itirazınızı inceledi ve onayladı."}
         />
       )}
 
@@ -231,6 +295,42 @@ const ExamResultDetail = () => {
           )}
         </Col>
       </Row>
+
+      <Modal
+        title={<span style={{ color: colors.textPrimary }}>Notuma İtiraz Et</span>}
+        open={regradeModalOpen}
+        onCancel={() => { setRegradeModalOpen(false); setRegradeReason(""); }}
+        footer={null}
+      >
+        <div style={{ padding: "8px 0" }}>
+          <Text style={{ color: colors.textMuted, display: "block", marginBottom: 8 }}>
+            Şu anki puanınız: <strong style={{ color: getScoreColor(totalScore), fontFamily: "'JetBrains Mono'" }}>{totalScore}</strong>
+          </Text>
+          <Text style={{ color: colors.textMuted, display: "block", marginBottom: 16, fontSize: 13 }}>
+            Notunuza neden itiraz etmek istediğinizi açıklayın. Öğretmeniniz gerekçenizi inceleyecek.
+          </Text>
+          <Input.TextArea
+            placeholder="Gerekçenizi yazın..."
+            rows={4}
+            value={regradeReason}
+            onChange={(e) => setRegradeReason(e.target.value)}
+            maxLength={500}
+            showCount
+            style={{ marginBottom: 16 }}
+          />
+          <Button
+            type="primary"
+            block
+            icon={<SendOutlined />}
+            loading={regradeLoading}
+            onClick={handleRegradeSubmit}
+            disabled={regradeReason.trim().length < 10}
+            style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none", fontWeight: 600 }}
+          >
+            Talebi Gönder
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };

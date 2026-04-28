@@ -339,5 +339,39 @@ namespace CodexIQ.Infrastructure.Repository
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<List<RegradeRequest>> GetPendingRegradeRequestsAsync(Guid teacherId)
+        {
+            return await _context.RegradeRequests
+                .Where(r => r.TeacherId == teacherId && r.Status == RegradeStatus.Pending)
+                .Include(r => r.Student)
+                .Include(r => r.ExamPaper)
+                    .ThenInclude(ep => ep.Exam)
+                        .ThenInclude(e => e.Course)
+                .Include(r => r.ExamPaper)
+                    .ThenInclude(ep => ep.FinalEvaluation)
+                .OrderBy(r => r.CreatedDate)
+                .ToListAsync();
+        }
+
+        public async Task<RegradeRequest?> GetRegradeRequestByIdAsync(Guid requestId, Guid teacherId)
+        {
+            return await _context.RegradeRequests
+                .Include(r => r.ExamPaper)
+                    .ThenInclude(ep => ep.FinalEvaluation)
+                .FirstOrDefaultAsync(r => r.Id == requestId && r.TeacherId == teacherId);
+        }
+
+        public async Task UpdateRegradeRequestAsync(RegradeRequest request)
+        {
+            _context.RegradeRequests.Update(request);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<int> GetPendingRegradeCountAsync(Guid teacherId)
+        {
+            return await _context.RegradeRequests
+                .CountAsync(r => r.TeacherId == teacherId && r.Status == RegradeStatus.Pending);
+        }
     }
 }

@@ -203,6 +203,43 @@ namespace CodexIQ.Application.Services
             return await _unitOfWork.Admin.GetAnnouncementsAsync();
         }
 
+        public async Task CreateRegradeRequestAsync(Guid studentId, Guid examPaperId, string reason)
+        {
+            var paper = await _unitOfWork.Student.GetExamResultDetailAsync(studentId, examPaperId);
+            if (paper == null || paper.FinalEvaluation == null)
+                throw new NotFoundException("Sınav sonucu bulunamadı.");
+
+            var existing = await _unitOfWork.Student.GetActiveRegradeRequestAsync(studentId, examPaperId);
+            if (existing != null && existing.Status != CodexIQ.Domain.Entities.RegradeStatus.Rejected)
+                throw new ValidationException("Bu sınav için zaten aktif bir itiraz talebiniz var.");
+
+            var request = new CodexIQ.Domain.Entities.RegradeRequest
+            {
+                ExamPaperId = examPaperId,
+                StudentId   = studentId,
+                TeacherId   = paper.Exam.TeacherId,
+                Reason      = reason,
+                Status      = CodexIQ.Domain.Entities.RegradeStatus.Pending
+            };
+
+            await _unitOfWork.Student.AddRegradeRequestAsync(request);
+        }
+
+        public async Task<RegradeRequestStatusDto?> GetRegradeRequestStatusAsync(Guid studentId, Guid examPaperId)
+        {
+            var req = await _unitOfWork.Student.GetActiveRegradeRequestAsync(studentId, examPaperId);
+            if (req == null) return null;
+
+            return new RegradeRequestStatusDto
+            {
+                Id          = req.Id,
+                Status      = req.Status.ToString(),
+                TeacherNote = req.TeacherNote,
+                CreatedDate = req.CreatedDate,
+                ResolvedAt  = req.ResolvedAt
+            };
+        }
+
         public async Task<JoinClassResultDto> JoinClassAsync(Guid studentId, string joinCode)
         {
             var cls = await _unitOfWork.Student.GetClassByJoinCodeAsync(joinCode.Trim().ToUpper());

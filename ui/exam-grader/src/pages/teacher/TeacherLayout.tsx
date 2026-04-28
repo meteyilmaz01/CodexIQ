@@ -15,6 +15,7 @@ import {
   MenuOutlined,
   CloseOutlined,
   CodeOutlined,
+  AuditOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
@@ -46,11 +47,33 @@ const TeacherLayout = () => {
     if (isMobile) setDrawerOpen(false);
   };
 
+  const [regradeCount, setRegradeCount] = useState(0);
+
+  useEffect(() => {
+    teacherApi.getRegradeRequestCount()
+      .then((res: any) => setRegradeCount((res.data || res)?.count ?? 0))
+      .catch(() => setRegradeCount(0));
+  }, []);
+
   const menuItems = [
     { key: "/teacher", icon: <DashboardOutlined />, label: t("dashboard") },
     { key: "/teacher/upload", icon: <CloudUploadOutlined />, label: t("uploadExam") },
     { key: "/teacher/results", icon: <BarChartOutlined />, label: t("results") },
     { key: "/teacher/students", icon: <TeamOutlined />, label: t("students") },
+    {
+      key: "/teacher/regrade-requests",
+      icon: <AuditOutlined />,
+      label: (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span>İtiraz Talepleri</span>
+          {regradeCount > 0 && (
+            <span style={{ background: "#ff4d4f", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, fontWeight: 700, minWidth: 18, textAlign: "center" }}>
+              {regradeCount}
+            </span>
+          )}
+        </div>
+      ),
+    },
     { key: "/teacher/messages", icon: <MessageOutlined />, label: t("messages") },
     { key: "/teacher/profile", icon: <UserOutlined />, label: t("profile") },
   ];

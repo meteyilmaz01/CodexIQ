@@ -29,5 +29,8 @@ namespace CodexIQ.Application.Interfaces.Repositories
         Task<Class?> GetClassByJoinCodeAsync(string joinCode);
         Task<bool> IsStudentInClassAsync(Guid studentId, Guid classId);
         Task AddStudentToClassAsync(Guid studentId, Guid classId);
+
+        Task<RegradeRequest?> GetActiveRegradeRequestAsync(Guid studentId, Guid examPaperId);
+        Task AddRegradeRequestAsync(RegradeRequest request);
     }
 }

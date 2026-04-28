@@ -13,4 +13,8 @@ export const studentApi = {
   getAnnouncements: () => api.get("/student/announcements").then((r) => r.data),
   getExamNotifications: () => api.get("/student/exam-notifications").then((r) => r.data),
   joinClass: (joinCode: string) => api.post("/student/join-class", { joinCode }).then((r) => r.data),
+  createRegradeRequest: (examPaperId: string, reason: string) =>
+    api.post(`/student/results/${examPaperId}/regrade-request`, { reason }).then((r) => r.data),
+  getRegradeRequestStatus: (examPaperId: string) =>
+    api.get(`/student/results/${examPaperId}/regrade-request`).then((r) => r.data),
 };

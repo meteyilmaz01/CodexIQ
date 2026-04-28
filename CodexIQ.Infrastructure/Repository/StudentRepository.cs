@@ -171,5 +171,19 @@ namespace CodexIQ.Infrastructure.Repository
             });
             await _context.SaveChangesAsync();
         }
+
+        public async Task<RegradeRequest?> GetActiveRegradeRequestAsync(Guid studentId, Guid examPaperId)
+        {
+            return await _context.RegradeRequests
+                .Where(r => r.StudentId == studentId && r.ExamPaperId == examPaperId)
+                .OrderByDescending(r => r.CreatedDate)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task AddRegradeRequestAsync(RegradeRequest request)
+        {
+            _context.RegradeRequests.Add(request);
+            await _context.SaveChangesAsync();
+        }
     }
 }

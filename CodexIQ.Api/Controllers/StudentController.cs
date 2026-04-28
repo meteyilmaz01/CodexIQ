@@ -134,6 +134,21 @@ public class StudentController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("results/{id}/regrade-request")]
+    public async Task<IActionResult> CreateRegradeRequest(Guid id, [FromBody] CreateRegradeRequestDto request)
+    {
+        await _studentService.CreateRegradeRequestAsync(GetUserId(), id, request.Reason);
+        _logger.LogInformation("İtiraz talebi oluşturuldu (ExamPaperId: {Id})", id);
+        return Ok(new { success = true, message = "İtiraz talebiniz iletildi." });
+    }
+
+    [HttpGet("results/{id}/regrade-request")]
+    public async Task<IActionResult> GetRegradeRequestStatus(Guid id)
+    {
+        var result = await _studentService.GetRegradeRequestStatusAsync(GetUserId(), id);
+        return Ok(result);
+    }
+
     [HttpPost("join-class")]
     public async Task<IActionResult> JoinClass([FromBody] JoinClassRequestDto request)
     {

@@ -31,5 +31,8 @@ namespace CodexIQ.Application.Interfaces.Services
         Task<List<ExamNotificationDto>> GetExamNotificationsAsync(Guid studentId);
 
         Task<JoinClassResultDto> JoinClassAsync(Guid studentId, string joinCode);
+
+        Task CreateRegradeRequestAsync(Guid studentId, Guid examPaperId, string reason);
+        Task<RegradeRequestStatusDto?> GetRegradeRequestStatusAsync(Guid studentId, Guid examPaperId);
     }
 }

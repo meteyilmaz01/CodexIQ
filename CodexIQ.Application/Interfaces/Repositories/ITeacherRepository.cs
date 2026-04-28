@@ -35,4 +35,9 @@ public interface ITeacherRepository
     Task<List<TeacherClassDto>> GetClassesByTeacherIdAsync(Guid teacherId);
     Task<Class?> GetClassByIdAsync(Guid classId, Guid teacherId);
     Task UpdateClassJoinCodeAsync(Guid classId, string newCode);
+
+    Task<List<RegradeRequest>> GetPendingRegradeRequestsAsync(Guid teacherId);
+    Task<RegradeRequest?> GetRegradeRequestByIdAsync(Guid requestId, Guid teacherId);
+    Task UpdateRegradeRequestAsync(RegradeRequest request);
+    Task<int> GetPendingRegradeCountAsync(Guid teacherId);
 }
