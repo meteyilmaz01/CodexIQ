@@ -27,7 +27,7 @@ public interface ITeacherRepository
     Task<List<ExamPaper>> GetExamPapersForExportAsync(Guid teacherId, Guid examId);
 
     // Students
-    Task<List<(User Student, string ClassName)>> GetStudentsByTeacherAsync(Guid teacherId, Guid? classId);
+    Task<List<(User Student, string ClassName, double Average, int ExamCount)>> GetStudentsByTeacherAsync(Guid teacherId, Guid? classId);
     Task<(User Student, double AverageScore, int ExamCount)?> GetStudentStatsAsync(Guid teacherId, Guid studentId);
 
     // Courses & Classes

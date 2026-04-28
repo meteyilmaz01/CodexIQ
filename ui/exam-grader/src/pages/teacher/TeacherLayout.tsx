@@ -20,6 +20,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
 import { teacherApi } from "../../api/teacherApi";
+import { useAppStore } from "../../store/useAppStore";
 
 const { Sider, Header, Content } = Layout;
 const { Text } = Typography;
@@ -34,6 +35,7 @@ const TeacherLayout = () => {
   const isMobile = !screens.md;
   const colors = useThemeColors();
   const t = useT();
+  const user = useAppStore((s) => s.user);
 
   useEffect(() => {
     if (!isMobile) setDrawerOpen(false);
@@ -65,7 +67,13 @@ const TeacherLayout = () => {
   };
 
   const AnnouncementsPopover = () => {
+    const token = useAppStore((s) => s.token);
+    const storageKey = `readAnnouncements:teacher:${(token || "anon").slice(-32)}`;
     const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [readIds, setReadIds] = useState<Set<string>>(() => {
+      try { return new Set(JSON.parse(localStorage.getItem(storageKey) || "[]")); }
+      catch { return new Set(); }
+    });
     const [open, setOpen] = useState(false);
 
     const loadAnnouncements = async () => {
@@ -77,6 +85,17 @@ const TeacherLayout = () => {
     };
 
     useEffect(() => { loadAnnouncements(); }, []);
+
+    useEffect(() => {
+      if (open && announcements.length > 0) {
+        const allIds = announcements.map((a: any) => String(a.id));
+        const next = new Set([...readIds, ...allIds]);
+        setReadIds(next);
+        localStorage.setItem(storageKey, JSON.stringify([...next]));
+      }
+    }, [open, announcements]);
+
+    const unreadCount = announcements.filter((a: any) => !readIds.has(String(a.id))).length;
 
     const content = (
       <div style={{ width: 300, maxHeight: 400, overflowY: "auto" }}>
@@ -94,7 +113,7 @@ const TeacherLayout = () => {
 
     return (
       <Popover content={content} title="Duyurular" trigger="click" open={open} onOpenChange={setOpen} placement="bottomRight">
-        <Badge count={announcements.length} size="small" style={{ cursor: "pointer" }}>
+        <Badge count={unreadCount} size="small" style={{ cursor: "pointer" }}>
           <BellOutlined style={{ fontSize: 18, color: colors.textSubtle, cursor: "pointer" }} />
         </Badge>
       </Popover>
@@ -154,10 +173,14 @@ const TeacherLayout = () => {
             gap: 10,
           }}
         >
-          <Avatar size={32} style={{ background: colors.accentBg, color: colors.accent }}>ÖĞ</Avatar>
+          <Avatar size={32} style={{ background: colors.accentBg, color: colors.accent }}>
+            {user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : "ÖĞ"}
+          </Avatar>
           <div>
-            <Text style={{ color: colors.textSecondary, fontSize: 13, display: "block" }}>Prof. Dr. Ahmet Yılmaz</Text>
-            <Text style={{ color: colors.textMuted, fontSize: 11 }}>Bilgisayar Müh.</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, display: "block" }}>
+              {user ? `${user.firstName} ${user.lastName}` : ""}
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 11 }}>{t("teacher")}</Text>
           </div>
         </div>
       )}
@@ -230,7 +253,7 @@ const TeacherLayout = () => {
             position: "sticky",
             top: 0,
             zIndex: 99,
-            height: 56,
+            height: 72,
           }}
         >
           <div
@@ -244,13 +267,13 @@ const TeacherLayout = () => {
             <AnnouncementsPopover />
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenu }} placement="bottomRight">
               <Avatar size={34} style={{ background: colors.accentBg, color: colors.accent, cursor: "pointer" }}>
-                AY
+                {user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : "??"}
               </Avatar>
             </Dropdown>
           </div>
         </Header>
 
-        <Content style={{ padding: isMobile ? 12 : 24, minHeight: "calc(100vh - 56px)" }}>
+        <Content style={{ padding: isMobile ? 12 : 24, minHeight: "calc(100vh - 72px)" }}>
           <Outlet />
         </Content>
       </Layout>

@@ -119,8 +119,8 @@ const Dashboard = () => {
                       <Text style={{ color: colors.textMuted, fontSize: 12 }}>{item.date}</Text>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ fontSize: 20, fontWeight: 700, color: getScoreColor(item.score || item.totalScore || 0), fontFamily: "'JetBrains Mono'" }}>
-                        {item.score || item.totalScore || 0}
+                      <span style={{ fontSize: 20, fontWeight: 700, color: getScoreColor(item.finalScore ?? item.score ?? item.totalScore ?? 0), fontFamily: "'JetBrains Mono'" }}>
+                        {item.finalScore ?? item.score ?? item.totalScore ?? 0}
                       </span>
                     </div>
                   </div>

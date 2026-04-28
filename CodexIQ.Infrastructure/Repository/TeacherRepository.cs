@@ -56,12 +56,18 @@ namespace CodexIQ.Infrastructure.Repository
                 .Where(ep => ep.Exam.TeacherId == teacherId && ep.FinalEvaluation != null)
                 .Include(ep => ep.Exam)
                     .ThenInclude(e => e.Course)
-                .GroupBy(ep => ep.Exam.Course.Name)
+                        .ThenInclude(c => c.Class)
+                            .ThenInclude(cls => cls.StudentClasses)
+                .GroupBy(ep => new
+                {
+                    CourseName = ep.Exam.Course.Name,
+                    ClassStudentCount = ep.Exam.Course.Class.StudentClasses.Count
+                })
                 .Select(g => new
                 {
-                    CourseName = g.Key,
+                    CourseName = g.Key.CourseName,
                     Average = g.Average(ep => ep.FinalEvaluation!.FinalScore),
-                    StudentCount = g.Select(ep => ep.StudentId).Distinct().Count()
+                    StudentCount = g.Key.ClassStudentCount
                 })
                 .ToListAsync();
 
@@ -225,7 +231,7 @@ namespace CodexIQ.Infrastructure.Repository
                 .ToListAsync();
         }
 
-        public async Task<List<(User Student, string ClassName)>> GetStudentsByTeacherAsync(Guid teacherId, Guid? classId)
+        public async Task<List<(User Student, string ClassName, double Average, int ExamCount)>> GetStudentsByTeacherAsync(Guid teacherId, Guid? classId)
         {
             var query = _context.StudentClasses
                 .Where(sc => sc.Class.TeacherId == teacherId)
@@ -237,9 +243,28 @@ namespace CodexIQ.Infrastructure.Repository
                 query = query.Where(sc => sc.ClassId == classId.Value);
 
             var studentClasses = await query.ToListAsync();
+            var studentIds = studentClasses.Select(sc => sc.StudentId).Distinct().ToList();
+
+            var stats = await _context.ExamPapers
+                .Where(ep => ep.StudentId != null
+                          && studentIds.Contains(ep.StudentId.Value)
+                          && ep.Exam.TeacherId == teacherId
+                          && ep.FinalEvaluation != null)
+                .GroupBy(ep => ep.StudentId!.Value)
+                .Select(g => new
+                {
+                    StudentId = g.Key,
+                    ExamCount = g.Count(),
+                    Average = g.Average(ep => ep.FinalEvaluation!.FinalScore)
+                })
+                .ToDictionaryAsync(x => x.StudentId, x => (x.Average, x.ExamCount));
 
             return studentClasses
-                .Select(sc => (sc.Student, sc.Class.Name))
+                .Select(sc =>
+                {
+                    var s = stats.TryGetValue(sc.StudentId, out var v) ? v : (0d, 0);
+                    return (sc.Student, sc.Class.Name, Math.Round(s.Item1, 1), s.Item2);
+                })
                 .ToList();
         }
 

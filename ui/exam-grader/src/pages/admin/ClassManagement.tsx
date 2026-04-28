@@ -172,6 +172,7 @@ const ClassManagement = () => {
 
   const classColumns = [
     { title: t("class"), key: "name", render: (_: unknown, r: any) => <div><Text style={{ color: colors.textSecondary, fontSize: 14, display: "block" }}>{r.name}</Text><Text style={{ color: colors.textMuted, fontSize: 12 }}>{r.department || ""}</Text></div> },
+    { title: t("teacher"), key: "teacher", responsive: ["md" as const], render: (_: unknown, r: any) => <Text style={{ color: colors.textSubtle, fontSize: 13 }}>{r.teacherName || r.teacher || "-"}</Text> },
     { title: t("year"), key: "year", render: (_: unknown, r: any) => r.year ? <Tag style={{ borderRadius: 6 }}>{r.year}. {t("classYear")}</Tag> : null },
     { title: t("student"), key: "students", render: (_: unknown, r: any) => <Tag style={{ borderRadius: 6 }}><TeamOutlined /> {r.students ?? r.studentCount ?? 0}</Tag> },
     { title: t("status"), key: "status", responsive: ["md" as const], render: (_: unknown, r: any) => isActive(r) ? <Tag color="success">{t("active")}</Tag> : <Tag>{t("inactive")}</Tag> },

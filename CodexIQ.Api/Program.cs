@@ -59,7 +59,6 @@ builder.Services.AddDbContext<CodexIQDbContext>(options =>
 
 builder.Services.AddMassTransit(x =>
 {
-    // Consumer'ı ekle
     x.AddConsumer<ExamResultConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
@@ -69,7 +68,6 @@ builder.Services.AddMassTransit(x =>
             h.Password("guest");
         });
 
-        // Python'dan gelen sonuç kuyruğunu ayarla
         cfg.ReceiveEndpoint("exam-results-queue", e =>
         {
             e.UseRawJsonDeserializer();
@@ -107,7 +105,6 @@ builder.Services.AddFluentValidationAutoValidation(configuration =>
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // "Teacher", "Student", "Admin" string değerlerini UserRole enum'a çevirir
         options.JsonSerializerOptions.Converters.Add(
             new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
@@ -216,7 +213,6 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Sink(new SignalRLogSink(app.Services))
     .CreateLogger();
 
-// Bekleyen migration'ları otomatik uygula
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CodexIQDbContext>();

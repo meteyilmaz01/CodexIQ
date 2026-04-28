@@ -5,19 +5,40 @@ namespace CodexIQ.Infrastructure.Messaging
 
     public class ExamResultPublished
     {
+        [JsonPropertyName("examPaperId")]
         public Guid ExamPaperId { get; set; }
+
+        [JsonPropertyName("examId")]
         public Guid ExamId { get; set; }
+
+        [JsonPropertyName("studentInfo")]
         public StudentInfoMessage StudentInfo { get; set; } = new();
+
+        [JsonPropertyName("extractedCode")]
         public string ExtractedCode { get; set; } = string.Empty;
+
+        [JsonPropertyName("evaluation")]
         public EvaluationMessage Evaluation { get; set; } = new();
+
+        [JsonPropertyName("modelScores")]
         public ModelScoresMessage ModelScores { get; set; } = new();
+
+        [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
     }
 
     public class StudentInfoMessage
     {
+        [JsonPropertyName("firstName")]
+        [JsonInclude]
         public string FirstName { get; set; } = string.Empty;
+
+        [JsonPropertyName("lastName")]
+        [JsonInclude]
         public string LastName { get; set; } = string.Empty;
+
+        [JsonPropertyName("studentNumber")]
+        [JsonInclude]
         public string StudentNumber { get; set; } = string.Empty;
     }
 

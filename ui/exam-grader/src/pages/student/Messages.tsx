@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Card, Typography, Input, Button, Avatar, List, Badge, Grid, Spin, message as antMessage } from "antd";
-import { SendOutlined, PaperClipOutlined, ArrowLeftOutlined, WifiOutlined, DisconnectOutlined } from "@ant-design/icons";
+import { Card, Typography, Input, Button, Avatar, List, Badge, Grid, Spin, Modal, message as antMessage } from "antd";
+import { SendOutlined, PaperClipOutlined, ArrowLeftOutlined, WifiOutlined, DisconnectOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
 import { messageApi } from "../../api/messageApi";
@@ -18,6 +18,8 @@ const Messages = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [hubConnected, setHubConnected] = useState(false);
+  const [newMsgOpen, setNewMsgOpen] = useState(false);
+  const [newMsgSearch, setNewMsgSearch] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef(selected);
   const screens = useBreakpoint();
@@ -66,7 +68,7 @@ const Messages = () => {
         const msgs = Array.isArray(data) ? data : [];
         setMessages(msgs);
         // Okunmamış mesajları okundu olarak işaretle
-        const unreadIds = msgs.filter((m: any) => !m.isRead && m.from !== "student" && m.senderId !== "me").map((m: any) => m.id);
+        const unreadIds = msgs.filter((m: any) => !m.isRead && !m.isMine && m.from !== "student" && m.from !== "me" && m.senderId !== "me").map((m: any) => m.id);
         for (const mid of unreadIds) {
           try { await messageApi.markAsRead(mid); } catch { /* ignore */ }
         }
@@ -83,7 +85,7 @@ const Messages = () => {
     setSending(true);
     try {
       await messageApi.sendMessage({ receiverId: selected, content: input.trim() });
-      setMessages((prev) => [...prev, { id: Date.now().toString(), senderId: "me", content: input.trim(), sentAt: new Date().toISOString(), from: "student" }]);
+      setMessages((prev) => [...prev, { id: Date.now().toString(), senderId: "me", content: input.trim(), sentAt: new Date().toISOString(), from: "me", isMine: true, isRead: true }]);
       setInput("");
     } catch (err: any) {
       antMessage.error(err?.response?.data?.message || "Mesaj gönderilemedi");
@@ -91,6 +93,26 @@ const Messages = () => {
   };
 
   const current = teachers.find((t: any) => (t.id || t.userId) === selected);
+
+  const startConversation = (uid: string) => {
+    setSelected(uid);
+    setNewMsgOpen(false);
+    setNewMsgSearch("");
+  };
+
+  const filteredContacts = teachers.filter((tch: any) => {
+    const name = tch.fullName || tch.name || `${tch.firstName || ""} ${tch.lastName || ""}`;
+    return name.toLowerCase().includes(newMsgSearch.toLowerCase());
+  });
+
+  const newMsgButton = (
+    <div style={{ padding: 12, borderBottom: colors.listItemBorder }}>
+      <Button block type="primary" icon={<PlusOutlined />} onClick={() => setNewMsgOpen(true)}
+        style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none", fontWeight: 600 }}>
+        {t("newMessage") || "Yeni Mesaj"}
+      </Button>
+    </div>
+  );
 
   const listContent = loadingTeachers ? (
     <div style={{ textAlign: "center", padding: 40 }}><Spin /></div>
@@ -148,7 +170,7 @@ const Messages = () => {
       <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
         {loadingMessages ? <div style={{ textAlign: "center", padding: 40 }}><Spin /></div> :
           messages.map((msg: any) => {
-            const isMe = msg.from === "student" || msg.senderId === "me" || msg.isMine;
+            const isMe = msg.isMine === true || msg.from === "me" || msg.from === "student" || msg.senderId === "me";
             return (
               <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start" }}>
                 <div style={{
@@ -185,8 +207,8 @@ const Messages = () => {
       </div>
       {!isMobile ? (
         <div style={{ display: "flex", gap: 16, height: "calc(100vh - 180px)", minHeight: 500 }}>
-          <Card style={{ width: 300, flexShrink: 0, background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, overflow: "hidden" }}
-            styles={{ body: { padding: 0, height: "100%", overflowY: "auto" } }}>{listContent}</Card>
+          <Card style={{ width: 300, flexShrink: 0, background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" }}
+            styles={{ body: { padding: 0, height: "100%", overflowY: "auto", display: "flex", flexDirection: "column" } }}>{newMsgButton}<div style={{ flex: 1, overflowY: "auto" }}>{listContent}</div></Card>
           {selected ? chatContent : (
             <Card style={{ flex: 1, background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: colors.textMuted }}>{t("selectConversation") || "Bir sohbet seçin"}</Text>
@@ -196,12 +218,34 @@ const Messages = () => {
       ) : (
         <div style={{ height: "calc(100vh - 160px)", minHeight: 400 }}>
           {!selected ? (
-            <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }} styles={{ body: { padding: 0 } }}>{listContent}</Card>
+            <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }} styles={{ body: { padding: 0 } }}>{newMsgButton}{listContent}</Card>
           ) : (
             <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>{chatContent}</div>
           )}
         </div>
       )}
+      <Modal title={t("newMessage") || "Yeni Mesaj"} open={newMsgOpen} onCancel={() => { setNewMsgOpen(false); setNewMsgSearch(""); }} footer={null} width={480}>
+        <Input prefix={<SearchOutlined style={{ color: colors.textDimmed }} />} placeholder={t("searchTeacher") || "Öğretmen ara..."}
+          value={newMsgSearch} onChange={(e) => setNewMsgSearch(e.target.value)} style={{ marginBottom: 12 }} allowClear />
+        {filteredContacts.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 24, color: colors.textMuted }}>{t("noContact") || "Kişi bulunamadı"}</div>
+        ) : (
+          <List dataSource={filteredContacts} style={{ maxHeight: 400, overflowY: "auto" }}
+            renderItem={(c: any) => {
+              const cid = c.id || c.userId;
+              const name = c.fullName || c.name || `${c.firstName || ""} ${c.lastName || ""}`;
+              return (
+                <List.Item style={{ cursor: "pointer", padding: "10px 8px" }} onClick={() => startConversation(cid)}>
+                  <List.Item.Meta
+                    avatar={<Avatar style={{ background: colors.accentBg, color: colors.accent }}>{name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}</Avatar>}
+                    title={<Text style={{ color: colors.textSecondary }}>{name}</Text>}
+                    description={<Text style={{ color: colors.textMuted, fontSize: 12 }}>{c.email || ""}</Text>}
+                  />
+                </List.Item>
+              );
+            }} />
+        )}
+      </Modal>
     </div>
   );
 };

@@ -240,7 +240,7 @@ public class TeacherService : ITeacherService
             StudentName = ep.Student != null
                 ? $"{ep.Student.FirstName} {ep.Student.LastName}"
                 : "OCR Bekleniyor",
-            StudentNo = ep.Student?.Email ?? "",
+            StudentNo = ep.Student?.StudentNumber ?? "",
             ExamName = ep.Exam.Name,
             CourseName = ep.Exam.Course.Name,
             Date = ep.FinalEvaluation!.EvaluatedAt,
@@ -295,7 +295,7 @@ public class TeacherService : ITeacherService
             StudentName = paper.Student != null
                 ? $"{paper.Student.FirstName} {paper.Student.LastName}"
                 : "OCR Bekleniyor",
-            StudentNo = paper.Student?.Email ?? "",
+            StudentNo = paper.Student?.StudentNumber ?? "",
             ExamName = paper.Exam.Name,
             CourseName = paper.Exam.Course.Name,
             CodePurpose = paper.Exam.CodePurpose,
@@ -395,7 +395,9 @@ public class TeacherService : ITeacherService
             Id = s.Student.Id,
             FullName = $"{s.Student.FirstName} {s.Student.LastName}",
             Email = s.Student.Email,
-            ClassName = s.ClassName
+            ClassName = s.ClassName,
+            Average = s.Average,
+            ExamCount = s.ExamCount
         }).ToList();
     }
 

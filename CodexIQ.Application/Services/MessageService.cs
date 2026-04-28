@@ -44,10 +44,11 @@ public class MessageService : IMessageService
         return messages.Select(m => new MessageDto
         {
             Id = m.Id,
-            From = m.SenderId == studentId ? "student" : "teacher",
+            From = m.SenderId == studentId ? "me" : "other",
             Text = m.Content,
             Time = m.CreatedDate,
-            IsRead = m.IsRead
+            IsRead = m.IsRead,
+            IsMine = m.SenderId == studentId
         }).ToList();
     }
 
@@ -67,10 +68,11 @@ public class MessageService : IMessageService
         var messageDto = new MessageDto
         {
             Id = message.Id,
-            From = "student",
+            From = "other",
             Text = message.Content,
             Time = message.CreatedDate,
-            IsRead = false
+            IsRead = false,
+            IsMine = false
         };
 
         await _chatNotification.SendMessageAsync(request.ReceiverId, messageDto);

@@ -121,6 +121,11 @@ const translations = {
     messagesSubtitle: "Öğretmenlerinizle iletişime geçin",
     teacherMessagesSubtitle: "Öğrencilerinizle iletişime geçin",
     typeMessage: "Mesajınızı yazın...",
+    newMessage: "Yeni Mesaj",
+    searchTeacher: "Öğretmen ara...",
+    searchStudent: "Öğrenci ara...",
+    noContact: "Kişi bulunamadı",
+    selectConversation: "Bir sohbet seçin",
 
     // Profile
     profileSubtitle: "Kişisel bilgilerinizi güncelleyin",
@@ -505,6 +510,11 @@ const translations = {
     messagesSubtitle: "Contact your teachers",
     teacherMessagesSubtitle: "Communicate with your students",
     typeMessage: "Type your message...",
+    newMessage: "New Message",
+    searchTeacher: "Search teacher...",
+    searchStudent: "Search student...",
+    noContact: "No contacts found",
+    selectConversation: "Select a conversation",
 
     // Profile
     profileSubtitle: "Update your personal information",

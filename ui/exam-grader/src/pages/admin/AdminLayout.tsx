@@ -150,7 +150,7 @@ const AdminLayout = () => {
             background: colors.headerBg, backdropFilter: "blur(10px)",
             borderBottom: colors.borderPrimary,
             padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between",
-            position: "sticky", top: 0, zIndex: 99, height: 56,
+            position: "sticky", top: 0, zIndex: 99, height: 72,
           }}
         >
           <div onClick={() => (isMobile ? setDrawerOpen(true) : setCollapsed(!collapsed))} style={{ cursor: "pointer", color: colors.textSubtle, fontSize: 18 }}>
@@ -166,7 +166,7 @@ const AdminLayout = () => {
             </Dropdown>
           </div>
         </Header>
-        <Content style={{ padding: isMobile ? 12 : 24, minHeight: "calc(100vh - 56px)" }}>
+        <Content style={{ padding: isMobile ? 12 : 24, minHeight: "calc(100vh - 72px)" }}>
           <Outlet />
         </Content>
       </Layout>

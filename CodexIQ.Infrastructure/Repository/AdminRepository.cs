@@ -228,7 +228,7 @@ namespace CodexIQ.Infrastructure.Repository
     public async Task<(List<AdminCourseListItemDto> Items, int TotalCount)> GetCoursesAsync(
         string? search, Guid? classId, bool? isActive, int page, int pageSize)
     {
-        var query = _context.Courses.Include(x => x.Class).AsQueryable();
+        var query = _context.Courses.Include(x => x.Class).ThenInclude(c => c.Teacher).AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(x => x.Name.ToLower().Contains(search.ToLower()));
@@ -251,6 +251,9 @@ namespace CodexIQ.Infrastructure.Repository
                 Name = x.Name,
                 ClassId = x.ClassId,
                 ClassName = x.Class.Name,
+                TeacherName = x.Class.Teacher != null ? (x.Class.Teacher.FirstName + " " + x.Class.Teacher.LastName) : string.Empty,
+                StudentCount = x.Class.StudentClasses.Count,
+                IsActive = x.IsActive,
                 CreatedDate = x.CreatedDate
             })
             .ToListAsync();

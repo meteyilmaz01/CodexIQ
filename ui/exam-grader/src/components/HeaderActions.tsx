@@ -1,40 +1,19 @@
-import { Dropdown, Button, Tooltip } from "antd";
+import type { CSSProperties } from "react";
+import { Button, Tooltip } from "antd";
 import { GlobalOutlined, SunOutlined, MoonOutlined } from "@ant-design/icons";
 import { useAppStore } from "../store/useAppStore";
 import { useThemeColors } from "../theme/themeConfig";
 
-const HeaderActions = () => {
+type HeaderActionsProps = {
+  style?: CSSProperties;
+};
+
+const HeaderActions = ({ style }: HeaderActionsProps) => {
   const { theme, language, toggleTheme, setLanguage } = useAppStore();
   const colors = useThemeColors();
 
-  const langItems = {
-    items: [
-      {
-        key: "tr",
-        label: (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 16 }}>🇹🇷</span>
-            <span>Türkçe</span>
-          </div>
-        ),
-      },
-      {
-        key: "en",
-        label: (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 16 }}>🇬🇧</span>
-            <span>English</span>
-          </div>
-        ),
-      },
-    ],
-    onClick: ({ key }: { key: string }) => setLanguage(key as "tr" | "en"),
-    selectedKeys: [language],
-  };
-
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      {/* Theme Toggle */}
+    <div style={{ display: "flex", alignItems: "center", gap: 8, ...style }}>
       <Tooltip title={theme === "dark" ? "Light Mode" : "Dark Mode"}>
         <Button
           type="text"
@@ -47,40 +26,42 @@ const HeaderActions = () => {
           }
           onClick={toggleTheme}
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 8,
+            width: 48,
+            height: 48,
+            borderRadius: 12,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: theme === "dark" ? "rgba(250,173,20,0.1)" : "rgba(24,144,255,0.1)",
-            border: `1px solid ${theme === "dark" ? "rgba(250,173,20,0.2)" : "rgba(24,144,255,0.2)"}`,
+            background: colors.headerBg,
+            border: colors.borderContainer,
+            color: colors.textSecondary,
+            boxShadow: "0 8px 24px -18px rgba(0,0,0,0.45)",
           }}
         />
       </Tooltip>
 
-      {/* Language Switcher */}
-      <Dropdown menu={langItems} placement="bottomRight" trigger={["click"]}>
-        <Button
-          type="text"
-          style={{
-            height: 36,
-            borderRadius: 8,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "0 10px",
-            background: colors.accentSubtle,
-            border: `1px solid ${colors.accentBorderSolid}`,
-            color: colors.accent,
-            fontSize: 13,
-            fontWeight: 500,
-          }}
-        >
-          <GlobalOutlined style={{ fontSize: 14 }} />
-          {language === "tr" ? "TR" : "EN"}
-        </Button>
-      </Dropdown>
+      <Button
+        type="text"
+        onClick={() => setLanguage(language === "tr" ? "en" : "tr")}
+        style={{
+          height: 48,
+          borderRadius: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "0 16px",
+          background: colors.headerBg,
+          border: colors.borderContainer,
+          color: colors.textSecondary,
+          fontSize: 15,
+          fontWeight: 600,
+          fontFamily: "'JetBrains Mono', monospace",
+          boxShadow: "0 8px 24px -18px rgba(0,0,0,0.45)",
+        }}
+      >
+        <GlobalOutlined style={{ fontSize: 15 }} />
+        {language === "tr" ? "TR" : "EN"}
+      </Button>
     </div>
   );
 };

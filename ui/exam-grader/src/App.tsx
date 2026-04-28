@@ -2,6 +2,7 @@ import { ConfigProvider, theme as antTheme } from "antd";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAppStore } from "./store/useAppStore";
 import Login from "./auth/Login";
+import LandingPage from "./pages/public/LandingPage";
 
 // Student
 import StudentLayout from "./pages/student/StudentLayout";
@@ -51,6 +52,7 @@ function App() {
     >
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
 
           {/* Student Routes */}
@@ -85,7 +87,7 @@ function App() {
             <Route path="queue" element={<QueueMonitor />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </ConfigProvider>

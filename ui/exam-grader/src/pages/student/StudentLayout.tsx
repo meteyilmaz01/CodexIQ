@@ -18,6 +18,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
 import { studentApi } from "../../api/studentApi";
+import { useAppStore } from "../../store/useAppStore";
 
 const { Sider, Header, Content } = Layout;
 const { Text } = Typography;
@@ -33,6 +34,7 @@ const StudentLayout = () => {
   const t = useT();
 
   const isMobile = !screens.md;
+  const user = useAppStore((s) => s.user);
 
   useEffect(() => {
     if (!isMobile) setDrawerOpen(false);
@@ -63,7 +65,13 @@ const StudentLayout = () => {
   };
 
   const AnnouncementsPopover = () => {
+    const token = useAppStore((s) => s.token);
+    const storageKey = `readAnnouncements:student:${(token || "anon").slice(-32)}`;
     const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [readIds, setReadIds] = useState<Set<string>>(() => {
+      try { return new Set(JSON.parse(localStorage.getItem(storageKey) || "[]")); }
+      catch { return new Set(); }
+    });
     const [open, setOpen] = useState(false);
 
     const loadAnnouncements = async () => {
@@ -75,6 +83,17 @@ const StudentLayout = () => {
     };
 
     useEffect(() => { loadAnnouncements(); }, []);
+
+    useEffect(() => {
+      if (open && announcements.length > 0) {
+        const allIds = announcements.map((a: any) => String(a.id));
+        const next = new Set([...readIds, ...allIds]);
+        setReadIds(next);
+        localStorage.setItem(storageKey, JSON.stringify([...next]));
+      }
+    }, [open, announcements]);
+
+    const unreadCount = announcements.filter((a: any) => !readIds.has(String(a.id))).length;
 
     const content = (
       <div style={{ width: 300, maxHeight: 400, overflowY: "auto" }}>
@@ -92,7 +111,7 @@ const StudentLayout = () => {
 
     return (
       <Popover content={content} title="Duyurular" trigger="click" open={open} onOpenChange={setOpen} placement="bottomRight">
-        <Badge count={announcements.length} size="small" style={{ cursor: "pointer" }}>
+        <Badge count={unreadCount} size="small" style={{ cursor: "pointer" }}>
           <BellOutlined style={{ fontSize: 18, color: colors.textSubtle, cursor: "pointer" }} />
         </Badge>
       </Popover>
@@ -161,11 +180,13 @@ const StudentLayout = () => {
           }}
         >
           <Avatar size={32} style={{ background: colors.accentBg, color: colors.accent }}>
-            ÖĞ
+            {user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : "ÖĞ"}
           </Avatar>
           <div>
-            <Text style={{ color: colors.textSecondary, fontSize: 13, display: "block" }}>Öğrenci Adı</Text>
-            <Text style={{ color: colors.textMuted, fontSize: 11 }}>Bilgisayar Müh.</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, display: "block" }}>
+              {user ? `${user.firstName} ${user.lastName}` : ""}
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 11 }}>{t("student")}</Text>
           </div>
         </div>
       )}
@@ -241,7 +262,7 @@ const StudentLayout = () => {
             position: "sticky",
             top: 0,
             zIndex: 99,
-            height: 56,
+            height: 72,
           }}
         >
           <div
@@ -259,14 +280,14 @@ const StudentLayout = () => {
                 size={34}
                 style={{ background: colors.accentBg, color: colors.accent, cursor: "pointer" }}
               >
-                ÖĞ
+                {user ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase() : "ÖĞ"}
               </Avatar>
             </Dropdown>
           </div>
         </Header>
 
         {/* Page Content */}
-        <Content style={{ padding: isMobile ? 12 : 24, minHeight: "calc(100vh - 56px)" }}>
+        <Content style={{ padding: isMobile ? 12 : 24, minHeight: "calc(100vh - 72px)" }}>
           <Outlet />
         </Content>
       </Layout>

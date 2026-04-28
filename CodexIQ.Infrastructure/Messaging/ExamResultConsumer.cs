@@ -144,35 +144,61 @@ namespace CodexIQ.Infrastructure.Messaging
             {
                 User? matchedStudent = null;
 
-        
+                // Sınava ait sınıfın öğrencileri (öncelikli aday havuzu)
+                var classStudents = await _dbContext.Exams
+                    .Where(e => e.Id == paper.ExamId)
+                    .SelectMany(e => e.Course.Class.StudentClasses.Select(sc => sc.Student))
+                    .ToListAsync();
+
+                // 1) StudentNumber ile (önce sınıf içinde, sonra global)
                 if (!string.IsNullOrWhiteSpace(message.StudentInfo.StudentNumber))
                 {
                     var studentNumber = message.StudentInfo.StudentNumber.Trim();
-                    matchedStudent = await _dbContext.Users
-                        .Where(u => u.StudentNumber == studentNumber)
-                        .FirstOrDefaultAsync();
+                    matchedStudent = classStudents.FirstOrDefault(u => u.StudentNumber == studentNumber)
+                        ?? await _dbContext.Users.FirstOrDefaultAsync(u => u.StudentNumber == studentNumber);
 
                     if (matchedStudent != null)
                         Console.WriteLine($"[CONSUMER] Öğrenci numarasıyla eşleştirildi: {studentNumber} → {matchedStudent.Id}");
                 }
 
-        
+                // 2) İsim eşleştirme — Türkçe locale + ad/soyad sırası karışıklığına dayanıklı
                 if (matchedStudent == null
-                    && !string.IsNullOrWhiteSpace(message.StudentInfo.FirstName)
-                    && !string.IsNullOrWhiteSpace(message.StudentInfo.LastName))
+                    && (!string.IsNullOrWhiteSpace(message.StudentInfo.FirstName)
+                        || !string.IsNullOrWhiteSpace(message.StudentInfo.LastName)))
                 {
-                    var firstName = message.StudentInfo.FirstName.Trim();
-                    var lastName  = message.StudentInfo.LastName.Trim();
+                    var tr = new System.Globalization.CultureInfo("tr-TR");
+                    string Norm(string s) => (s ?? "").Trim().ToLower(tr);
 
-                    matchedStudent = await _dbContext.Users
-                        .Where(u => u.FirstName.ToLower() == firstName.ToLower()
-                                 && u.LastName.ToLower()  == lastName.ToLower())
-                        .FirstOrDefaultAsync();
+                    var first = Norm(message.StudentInfo.FirstName);
+                    var last  = Norm(message.StudentInfo.LastName);
+                    var combinedRaw = $"{first} {last}".Trim();
+                    // Bazen Gemini tüm adı tek alana koyabilir → tüm tokenları topla
+                    var tokens = combinedRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var sortedTokens = tokens.OrderBy(t => t).ToArray();
+
+                    bool TokensEqual(User u)
+                    {
+                        var uTokens = ($"{Norm(u.FirstName)} {Norm(u.LastName)}")
+                            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                            .OrderBy(t => t).ToArray();
+                        return uTokens.SequenceEqual(sortedTokens);
+                    }
+
+                    // Önce sınıf öğrencileri arasında, sonra tüm Users
+                    matchedStudent = classStudents.FirstOrDefault(TokensEqual);
+
+                    if (matchedStudent == null)
+                    {
+                        var allStudents = await _dbContext.Users
+                            .Where(u => u.Role == UserRole.Student)
+                            .ToListAsync();
+                        matchedStudent = allStudents.FirstOrDefault(TokensEqual);
+                    }
 
                     if (matchedStudent != null)
-                        Console.WriteLine($"[CONSUMER] İsimle eşleştirildi: {firstName} {lastName} → {matchedStudent.Id}");
+                        Console.WriteLine($"[CONSUMER] İsimle eşleştirildi: '{combinedRaw}' → {matchedStudent.Id}");
                     else
-                        Console.WriteLine($"[CONSUMER][UYARI] Öğrenci bulunamadı: '{firstName} {lastName}' — StudentId null kalıyor");
+                        Console.WriteLine($"[CONSUMER][UYARI] Öğrenci bulunamadı: '{combinedRaw}' — StudentId null kalıyor");
                 }
 
                 if (matchedStudent != null)

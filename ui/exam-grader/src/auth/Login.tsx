@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import HeaderActions from "../components/HeaderActions";
 import { Form, Input, Button, Checkbox, message } from "antd";
 import {
+  ArrowLeftOutlined,
   UserOutlined,
   LockOutlined,
   EyeInvisibleOutlined,
@@ -20,6 +21,7 @@ const Login = () => {
   const t = useT();
   const navigate = useNavigate();
   const setAuth = useAppStore((s) => s.setAuth);
+  const language = useAppStore((s) => s.language);
 
   const onFinish = async (values: { email: string; password: string }) => {
   setLoading(true);
@@ -158,6 +160,7 @@ const Login = () => {
       position: "relative",
       overflow: "hidden",
       padding: 20,
+      paddingTop: 92,
     },
     particleContainer: {
       position: "absolute",
@@ -349,9 +352,46 @@ const Login = () => {
 
   return (
     <div style={styles.wrapper}>
-      <div style={{ position: "absolute", top: 20, right: 20, zIndex: 10 }}>
-          <HeaderActions />
-       </div>
+      {/* Top header bar — same position as landing/app headers */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 72,
+          zIndex: 200,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 20px",
+          background: colors.headerBg,
+          backdropFilter: "blur(10px)",
+          borderBottom: colors.borderPrimary,
+        }}
+      >
+        <a
+          href="/"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate("/");
+          }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            color: colors.textSecondary,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 13,
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          <ArrowLeftOutlined />
+          {language === "tr" ? "Geri Dön" : "Back"}
+        </a>
+        <HeaderActions />
+      </div>
       <style>{responsiveCSS}</style>
 
       {/* Floating code particles */}

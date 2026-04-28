@@ -128,8 +128,18 @@ const TeacherResultDetail = () => {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate("/teacher/results")} style={{ color: colors.textSubtle }} />
           <div>
-            <Title level={4} style={{ color: colors.textPrimary, margin: 0, fontFamily: "'JetBrains Mono'" }}>{data.studentName} — {data.examName || data.name}</Title>
-            <Text style={{ color: colors.textMuted }}>{data.studentNo} • {data.course || data.courseName} • {data.date}</Text>
+            <Title level={4} style={{ color: colors.textPrimary, margin: 0, fontFamily: "'JetBrains Mono'" }}>
+              {data.studentName && data.studentName.trim() !== "" && data.studentName !== "—"
+                ? data.studentName
+                : <span style={{ color: "#faad14" }}>OCR Eşleşmedi</span>}
+              {" — "}{data.examName || data.name}
+            </Title>
+            <Text style={{ color: colors.textMuted }}>
+              {data.studentNo
+                ? <><Text style={{ color: colors.textSecondary, fontWeight: 600 }}>Öğrenci No: {data.studentNo}</Text> • </>
+                : <><Text style={{ color: "#faad14" }}>Öğrenci atanmadı</Text> • </>}
+              {data.course || data.courseName} • {data.date}
+            </Text>
           </div>
         </div>
         <Space wrap>
