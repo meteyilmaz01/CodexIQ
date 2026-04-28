@@ -361,3 +361,18 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Claude Code
+.claude/
+
+# Hassas config dosyaları
+appsettings.json
+appsettings.Development.json
+.env
+.env.local
+.env.*.local
+
+# Graphify outputs
+graphify-out/
+build_graph.py
+.graphifyignore
