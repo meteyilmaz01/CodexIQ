@@ -25,5 +25,9 @@ namespace CodexIQ.Application.Interfaces.Repositories
             int pageSize);
 
         Task<ExamPaper?> GetExamResultDetailAsync(Guid studentId, Guid examPaperId);
+
+        Task<Class?> GetClassByJoinCodeAsync(string joinCode);
+        Task<bool> IsStudentInClassAsync(Guid studentId, Guid classId);
+        Task AddStudentToClassAsync(Guid studentId, Guid classId);
     }
 }

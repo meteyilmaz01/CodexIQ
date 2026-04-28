@@ -33,4 +33,6 @@ public interface ITeacherRepository
     // Courses & Classes
     Task<List<TeacherCourseDto>> GetCoursesByTeacherIdAsync(Guid teacherId);
     Task<List<TeacherClassDto>> GetClassesByTeacherIdAsync(Guid teacherId);
+    Task<Class?> GetClassByIdAsync(Guid classId, Guid teacherId);
+    Task UpdateClassJoinCodeAsync(Guid classId, string newCode);
 }

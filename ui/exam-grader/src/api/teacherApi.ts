@@ -45,5 +45,7 @@ export const teacherApi = {
 
   getCourses: () => api.get("/teacher/courses").then((r) => r.data),
   getClasses: () => api.get("/teacher/classes").then((r) => r.data),
+  regenerateJoinCode: (classId: string) =>
+    api.post(`/teacher/classes/${classId}/regenerate-code`).then((r) => r.data),
   getAnnouncements: () => api.get("/teacher/announcements").then((r) => r.data),
 };

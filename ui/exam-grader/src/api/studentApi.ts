@@ -12,4 +12,5 @@ export const studentApi = {
   getResultDetail: (id: string) => api.get(`/student/results/${id}`).then((r) => r.data),
   getAnnouncements: () => api.get("/student/announcements").then((r) => r.data),
   getExamNotifications: () => api.get("/student/exam-notifications").then((r) => r.data),
+  joinClass: (joinCode: string) => api.post("/student/join-class", { joinCode }).then((r) => r.data),
 };

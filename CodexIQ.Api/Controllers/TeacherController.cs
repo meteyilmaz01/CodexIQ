@@ -219,6 +219,14 @@ public class TeacherController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("classes/{classId:guid}/regenerate-code")]
+    public async Task<IActionResult> RegenerateJoinCode(Guid classId)
+    {
+        var newCode = await _teacherService.RegenerateJoinCodeAsync(GetUserId(), classId);
+        _logger.LogInformation("Sınıf katılım kodu yenilendi (ClassId: {ClassId})", classId);
+        return Ok(new { joinCode = newCode });
+    }
+
     [HttpGet("announcements")]
     public async Task<IActionResult> GetAnnouncements()
     {

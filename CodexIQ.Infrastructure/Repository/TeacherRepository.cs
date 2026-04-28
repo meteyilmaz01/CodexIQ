@@ -318,9 +318,26 @@ namespace CodexIQ.Infrastructure.Repository
                 {
                     Id = c.Id,
                     Name = c.Name,
-                    StudentCount = c.StudentClasses.Count
+                    StudentCount = c.StudentClasses.Count,
+                    JoinCode = c.JoinCode
                 })
                 .ToListAsync();
+        }
+
+        public async Task<Class?> GetClassByIdAsync(Guid classId, Guid teacherId)
+        {
+            return await _context.Classrooms
+                .FirstOrDefaultAsync(c => c.Id == classId && c.TeacherId == teacherId && c.IsActive);
+        }
+
+        public async Task UpdateClassJoinCodeAsync(Guid classId, string newCode)
+        {
+            var cls = await _context.Classrooms.FindAsync(classId);
+            if (cls != null)
+            {
+                cls.JoinCode = newCode;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

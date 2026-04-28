@@ -40,6 +40,7 @@ public interface ITeacherService
     // Courses & Classes
     Task<List<TeacherCourseDto>> GetCoursesAsync(Guid teacherId);
     Task<List<TeacherClassDto>> GetClassesAsync(Guid teacherId);
+    Task<string> RegenerateJoinCodeAsync(Guid teacherId, Guid classId);
 
     // Announcements
     Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync();

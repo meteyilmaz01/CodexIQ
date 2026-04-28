@@ -146,5 +146,30 @@ namespace CodexIQ.Infrastructure.Repository
                 .Include(ep => ep.AIModelResults)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<Class?> GetClassByJoinCodeAsync(string joinCode)
+        {
+            return await _context.Classrooms
+                .FirstOrDefaultAsync(c => c.JoinCode == joinCode && c.IsActive);
+        }
+
+        public async Task<bool> IsStudentInClassAsync(Guid studentId, Guid classId)
+        {
+            return await _context.Set<StudentClass>()
+                .AnyAsync(sc => sc.StudentId == studentId && sc.ClassId == classId);
+        }
+
+        public async Task AddStudentToClassAsync(Guid studentId, Guid classId)
+        {
+            _context.Set<StudentClass>().Add(new StudentClass
+            {
+                Id = Guid.NewGuid(),
+                StudentId = studentId,
+                ClassId = classId,
+                CreatedDate = DateTime.UtcNow,
+                IsActive = true
+            });
+            await _context.SaveChangesAsync();
+        }
     }
 }

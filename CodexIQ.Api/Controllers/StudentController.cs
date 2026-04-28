@@ -134,6 +134,14 @@ public class StudentController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("join-class")]
+    public async Task<IActionResult> JoinClass([FromBody] JoinClassRequestDto request)
+    {
+        var result = await _studentService.JoinClassAsync(GetUserId(), request.JoinCode);
+        _logger.LogInformation("Öğrenci sınıfa katıldı: {ClassName}", result.ClassName);
+        return Ok(result);
+    }
+
     [HttpPost("convert-code")]
     public async Task<IActionResult> ConvertCode([FromBody] ConvertCodeRequestDto request)
     {

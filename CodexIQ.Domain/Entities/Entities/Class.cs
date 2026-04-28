@@ -5,7 +5,8 @@ namespace CodexIQ.Domain.Entities
     public class Class : BaseEntity
     {
         public string Name { get; set; } = string.Empty;
-        public Guid TeacherId { get; set; } 
+        public Guid TeacherId { get; set; }
+        public string JoinCode { get; set; } = string.Empty;
 
 
         public User Teacher { get; set; } = null!;

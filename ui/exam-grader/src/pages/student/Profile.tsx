@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Card, Typography, Input, Button, Avatar, Row, Col, Form, Divider, message, Spin } from "antd";
-import { UserOutlined, MailOutlined, LockOutlined, SaveOutlined, BookOutlined, IdcardOutlined, NumberOutlined } from "@ant-design/icons";
+import { Card, Typography, Input, Button, Avatar, Row, Col, Form, Divider, message, Spin, Modal } from "antd";
+import { UserOutlined, MailOutlined, LockOutlined, SaveOutlined, BookOutlined, IdcardOutlined, NumberOutlined, TeamOutlined } from "@ant-design/icons";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
 import { studentApi } from "../../api/studentApi";
@@ -11,6 +11,9 @@ const { Title, Text } = Typography;
 const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [profileForm] = Form.useForm();
@@ -42,6 +45,20 @@ const Profile = () => {
     } finally { setLoading(false); }
   };
 
+  const handleJoinClass = async () => {
+    if (!joinCode.trim()) return;
+    setJoinLoading(true);
+    try {
+      const res = await studentApi.joinClass(joinCode.trim());
+      const data = res.data || res;
+      message.success(`"${data.className}" sınıfına başarıyla katıldınız!`);
+      setJoinModalOpen(false);
+      setJoinCode("");
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Geçersiz katılım kodu");
+    } finally { setJoinLoading(false); }
+  };
+
   const handlePasswordChange = async (values: any) => {
     setPasswordLoading(true);
     try {
@@ -65,6 +82,18 @@ const Profile = () => {
       </div>
       <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
+          <Card
+            style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16, cursor: "pointer" }}
+            onClick={() => setJoinModalOpen(true)}
+            styles={{ body: { padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 } }}
+          >
+            <TeamOutlined style={{ fontSize: 22, color: colors.accent }} />
+            <div>
+              <Text style={{ color: colors.textSecondary, fontWeight: 600, display: "block" }}>Sınıfa Katıl</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }}>Öğretmenin verdiği kodu gir</Text>
+            </div>
+          </Card>
+
           <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, textAlign: "center" }}>
             <Avatar size={80} style={{ background: colors.accentBg, color: colors.accent, fontSize: 28, fontWeight: 700, marginBottom: 16 }}>{initials}</Avatar>
             <Title level={5} style={{ color: colors.textPrimary, margin: "0 0 4px" }}>{profile?.firstName} {profile?.lastName}</Title>
@@ -156,6 +185,37 @@ const Profile = () => {
           </Card>
         </Col>
       </Row>
+
+      <Modal
+        title={<span style={{ color: colors.textPrimary }}>Sınıfa Katıl</span>}
+        open={joinModalOpen}
+        onCancel={() => { setJoinModalOpen(false); setJoinCode(""); }}
+        footer={null}
+      >
+        <div style={{ padding: "8px 0" }}>
+          <Text style={{ color: colors.textMuted, display: "block", marginBottom: 16 }}>
+            Öğretmenin sana verdiği 6 haneli katılım kodunu gir.
+          </Text>
+          <Input
+            placeholder="Örn: AB3K9Z"
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+            onPressEnter={handleJoinClass}
+            maxLength={6}
+            style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 20, fontWeight: 700, letterSpacing: 6, textAlign: "center", marginBottom: 16 }}
+          />
+          <Button
+            type="primary"
+            block
+            loading={joinLoading}
+            onClick={handleJoinClass}
+            disabled={joinCode.trim().length < 4}
+            style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none", fontWeight: 600 }}
+          >
+            Katıl
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -546,6 +546,24 @@ public class TeacherService : ITeacherService
         return await _unitOfWork.Teacher.GetClassesByTeacherIdAsync(teacherId);
     }
 
+    public async Task<string> RegenerateJoinCodeAsync(Guid teacherId, Guid classId)
+    {
+        var cls = await _unitOfWork.Teacher.GetClassByIdAsync(classId, teacherId);
+        if (cls == null)
+            throw new CodexIQ.Application.Exceptions.NotFoundException("Sınıf bulunamadı.");
+
+        var newCode = GenerateJoinCode();
+        await _unitOfWork.Teacher.UpdateClassJoinCodeAsync(classId, newCode);
+        return newCode;
+    }
+
+    private static string GenerateJoinCode()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var rng = new Random();
+        return new string(Enumerable.Range(0, 6).Select(_ => chars[rng.Next(chars.Length)]).ToArray());
+    }
+
     public async Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync()
     {
         return await _unitOfWork.Admin.GetAnnouncementsAsync();

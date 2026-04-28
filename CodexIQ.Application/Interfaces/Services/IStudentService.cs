@@ -29,5 +29,7 @@ namespace CodexIQ.Application.Interfaces.Services
 
         Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync();
         Task<List<ExamNotificationDto>> GetExamNotificationsAsync(Guid studentId);
+
+        Task<JoinClassResultDto> JoinClassAsync(Guid studentId, string joinCode);
     }
 }

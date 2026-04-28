@@ -203,6 +203,21 @@ namespace CodexIQ.Application.Services
             return await _unitOfWork.Admin.GetAnnouncementsAsync();
         }
 
+        public async Task<JoinClassResultDto> JoinClassAsync(Guid studentId, string joinCode)
+        {
+            var cls = await _unitOfWork.Student.GetClassByJoinCodeAsync(joinCode.Trim().ToUpper());
+            if (cls == null)
+                throw new NotFoundException("Geçersiz katılım kodu. Lütfen öğretmeninizden doğru kodu alın.");
+
+            var alreadyIn = await _unitOfWork.Student.IsStudentInClassAsync(studentId, cls.Id);
+            if (alreadyIn)
+                throw new ValidationException("Bu sınıfa zaten kayıtlısınız.");
+
+            await _unitOfWork.Student.AddStudentToClassAsync(studentId, cls.Id);
+
+            return new JoinClassResultDto { ClassId = cls.Id, ClassName = cls.Name };
+        }
+
         public async Task<List<ExamNotificationDto>> GetExamNotificationsAsync(Guid studentId)
         {
             var cutoff = DateTime.UtcNow.AddDays(-14);

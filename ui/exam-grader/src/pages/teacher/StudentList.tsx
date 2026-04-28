@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Card, Table, Tag, Input, Select, Typography, Avatar, Progress } from "antd";
-import { SearchOutlined, MessageOutlined } from "@ant-design/icons";
+import { Card, Table, Tag, Input, Select, Typography, Avatar, Progress, Tooltip, Button, message } from "antd";
+import { SearchOutlined, MessageOutlined, CopyOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
@@ -13,7 +13,7 @@ const StudentListPage = () => {
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
-  const [classes, setClasses] = useState<{ value: string; label: string }[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const colors = useThemeColors();
   const t = useT();
@@ -32,9 +32,17 @@ const StudentListPage = () => {
     try {
       const res = await teacherApi.getClasses();
       const data = res.data || res;
-      const items = Array.isArray(data) ? data : data.items || [];
-      setClasses(items.map((c: any) => ({ value: c.id, label: c.name })));
+      setClasses(Array.isArray(data) ? data : data.items || []);
     } catch { setClasses([]); }
+  };
+
+  const handleRegenerateCode = async (classId: string) => {
+    try {
+      const res = await teacherApi.regenerateJoinCode(classId);
+      const newCode = res.joinCode ?? res;
+      setClasses((prev) => prev.map((c) => c.id === classId ? { ...c, joinCode: newCode } : c));
+      message.success("Katılım kodu yenilendi");
+    } catch { message.error("Kod yenilenirken hata oluştu"); }
   };
 
   useEffect(() => { fetchStudents(); fetchClasses(); }, []);
@@ -93,10 +101,33 @@ const StudentListPage = () => {
         <Text style={{ color: colors.textMuted }}>{t("studentsSubtitle")}</Text>
       </div>
 
+      {/* Class join codes */}
+      {classes.length > 0 && (
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+          {classes.map((c: any) => (
+            <Card key={c.id} size="small" style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 10, minWidth: 220 }} styles={{ body: { padding: "10px 14px" } }}>
+              <Text style={{ color: colors.textMuted, fontSize: 11, display: "block" }}>{c.name}</Text>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 20, fontWeight: 800, color: colors.accent, letterSpacing: 4 }}>
+                  {c.joinCode || "------"}
+                </span>
+                <Tooltip title="Kodu kopyala">
+                  <Button type="text" size="small" icon={<CopyOutlined />} onClick={() => { navigator.clipboard.writeText(c.joinCode || ""); message.success("Kod kopyalandı"); }} style={{ color: colors.textMuted }} />
+                </Tooltip>
+                <Tooltip title="Yeni kod üret">
+                  <Button type="text" size="small" icon={<ReloadOutlined />} onClick={() => handleRegenerateCode(c.id)} style={{ color: colors.textMuted }} />
+                </Tooltip>
+              </div>
+              <Text style={{ color: colors.textDimmed, fontSize: 11 }}>Katılım kodu • {c.studentCount ?? 0} öğrenci</Text>
+            </Card>
+          ))}
+        </div>
+      )}
+
       <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16 }} styles={{ body: { padding: "12px 16px" } }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <Input placeholder={t("searchStudent")} prefix={<SearchOutlined style={{ color: colors.textDimmed }} />} value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 250 }} />
-          <Select placeholder={t("class")} allowClear onChange={(v) => setClassFilter(v)} options={classes} style={{ minWidth: 200 }} />
+          <Select placeholder={t("class")} allowClear onChange={(v) => setClassFilter(v)} options={classes.map((c: any) => ({ value: c.id, label: c.name }))} style={{ minWidth: 200 }} />
         </div>
       </Card>
 
