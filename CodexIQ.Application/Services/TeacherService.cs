@@ -369,16 +369,18 @@ public class TeacherService : ITeacherService
     {
         var papers = await _unitOfWork.Teacher.GetExamPapersForExportAsync(teacherId, examName);
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Öğrenci,E-posta,Sınav,Ders,Puan,Syntax Hata,Mantık Hata,Paylaşıldı");
+        sb.AppendLine("Öğrenci;E-posta;Sınav;Ders;Puan;Syntax Hata;Mantık Hata;Paylaşıldı");
 
         foreach (var ep in papers)
         {
             var studentName  = ep.Student != null ? $"{ep.Student.FirstName} {ep.Student.LastName}" : "OCR Bekleniyor";
             var studentEmail = ep.Student?.Email ?? "";
-            sb.AppendLine($"{studentName},{studentEmail},{ep.Exam.Name},{ep.Exam.Course.Name},{ep.FinalEvaluation!.FinalScore},{ep.FinalEvaluation.SyntaxErrorCount},{ep.FinalEvaluation.LogicErrorCount},{ep.FinalEvaluation.IsShared}");
+            sb.AppendLine($"{studentName};{studentEmail};{ep.Exam.Name};{ep.Exam.Course.Name};{ep.FinalEvaluation!.FinalScore};{ep.FinalEvaluation.SyntaxErrorCount};{ep.FinalEvaluation.LogicErrorCount};{ep.FinalEvaluation.IsShared}");
         }
 
-        return System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+        var bom = new byte[] { 0xEF, 0xBB, 0xBF };
+        var content = System.Text.Encoding.UTF8.GetBytes(sb.ToString());
+        return bom.Concat(content).ToArray();
     }
 
     public async Task<byte[]> ExportPdfAsync(Guid teacherId, string? examName)
