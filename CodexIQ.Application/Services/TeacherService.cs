@@ -365,9 +365,9 @@ public class TeacherService : ITeacherService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    public async Task<byte[]> ExportExcelAsync(Guid teacherId, Guid examId)
+    public async Task<byte[]> ExportExcelAsync(Guid teacherId, string? examName)
     {
-        var papers = await _unitOfWork.Teacher.GetExamPapersForExportAsync(teacherId, examId);
+        var papers = await _unitOfWork.Teacher.GetExamPapersForExportAsync(teacherId, examName);
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("Öğrenci,E-posta,Sınav,Ders,Puan,Syntax Hata,Mantık Hata,Paylaşıldı");
 
@@ -381,9 +381,9 @@ public class TeacherService : ITeacherService
         return System.Text.Encoding.UTF8.GetBytes(sb.ToString());
     }
 
-    public async Task<byte[]> ExportPdfAsync(Guid teacherId, Guid examId)
+    public async Task<byte[]> ExportPdfAsync(Guid teacherId, string? examName)
     {
-        return await ExportExcelAsync(teacherId, examId);
+        return await ExportExcelAsync(teacherId, examName);
     }
 
     public async Task<List<TeacherStudentListItemDto>> GetStudentsAsync(Guid teacherId, Guid? classId)

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, Table, Tag, Input, Select, Typography, Button, Space, Dropdown, Tooltip, message } from "antd";
 import { SearchOutlined, EyeOutlined, DownloadOutlined, ShareAltOutlined, FileExcelOutlined, FilePdfOutlined, CheckCircleOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
 import { teacherApi } from "../../api/teacherApi";
@@ -10,9 +10,10 @@ const { Title, Text } = Typography;
 
 const TeacherResults = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState<string | null>(null);
-  const [examFilter, setExamFilter] = useState<string | null>(null);
+  const [examFilter, setExamFilter] = useState<string | null>(() => searchParams.get("exam"));
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,11 @@ const TeacherResults = () => {
   useEffect(() => { fetchResults(); }, []);
   useEffect(() => { const timer = setTimeout(() => fetchResults(1), 500); return () => clearTimeout(timer); }, [search, courseFilter, examFilter]);
 
+  const handleExamFilterChange = (v: string | null) => {
+    setExamFilter(v);
+    if (v) setSearchParams({ exam: v }); else setSearchParams({});
+  };
+
   const getScoreColor = (s: number) => { if (s >= 85) return "#52c41a"; if (s >= 70) return colors.accent; if (s >= 50) return "#faad14"; return "#ff4d4f"; };
 
   const handleBulkShare = async () => {
@@ -42,11 +48,20 @@ const TeacherResults = () => {
 
   const handleExport = async (type: string) => {
     try {
-      const res = type === "excel" ? await teacherApi.exportExcel(examFilter || "") : await teacherApi.exportPdf(examFilter || "");
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a"); link.href = url; link.download = `results.${type === "excel" ? "csv" : "pdf"}`; link.click();
+      const res = type === "excel"
+        ? await teacherApi.exportExcel(examFilter || undefined)
+        : await teacherApi.exportPdf(examFilter || undefined);
+      const safeName = examFilter ? examFilter.replace(/ /g, "_") : "tum_sonuclar";
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv;charset=utf-8" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${safeName}.csv`;
+      link.click();
+      window.URL.revokeObjectURL(url);
       message.success(`${type.toUpperCase()} ${t("downloading")}...`);
-    } catch { message.error("Export hatası"); }
+    } catch {
+      message.error("Export hatası");
+    }
   };
 
   const coursesList = [...new Set(results.map((r: any) => r.course || r.courseName).filter(Boolean))];
@@ -94,7 +109,7 @@ const TeacherResults = () => {
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <Input placeholder={t("searchStudent")} prefix={<SearchOutlined style={{ color: colors.textDimmed }} />} value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220 }} />
           <Select placeholder={t("course")} allowClear onChange={(v) => setCourseFilter(v)} options={coursesList.map((c) => ({ label: c, value: c }))} style={{ minWidth: 160 }} />
-          <Select placeholder={t("exam")} allowClear onChange={(v) => setExamFilter(v)} options={exams.map((e) => ({ label: e, value: e }))} style={{ minWidth: 200 }} />
+          <Select placeholder={t("exam")} allowClear value={examFilter} onChange={handleExamFilterChange} options={exams.map((e) => ({ label: e, value: e }))} style={{ minWidth: 200 }} />
         </div>
       </Card>
 

@@ -26,8 +26,8 @@ public interface ITeacherService
     Task UpdateNoteAsync(Guid teacherId, Guid examPaperId, UpdateNoteRequestDto request);
     Task ShareResultAsync(Guid teacherId, Guid examPaperId);
     Task BulkShareAsync(Guid teacherId, BulkShareRequestDto request);
-    Task<byte[]> ExportExcelAsync(Guid teacherId, Guid examId);
-    Task<byte[]> ExportPdfAsync(Guid teacherId, Guid examId);
+    Task<byte[]> ExportExcelAsync(Guid teacherId, string? examName);
+    Task<byte[]> ExportPdfAsync(Guid teacherId, string? examName);
 
     // Students
     Task<List<TeacherStudentListItemDto>> GetStudentsAsync(Guid teacherId, Guid? classId);

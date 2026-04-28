@@ -8,6 +8,8 @@ public class ExamResultDetailDto
     public string? CodePurpose { get; set; }
     public DateTime Date { get; set; }
     public int TotalScore { get; set; }
+    public bool IsOverridden { get; set; }
+    public int? OriginalScore { get; set; }
     public string Code { get; set; } = string.Empty;
     public string? TeacherNote { get; set; }
     public List<CodeErrorDto> SyntaxErrors { get; set; } = new();

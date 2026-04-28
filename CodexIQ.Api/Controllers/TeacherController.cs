@@ -147,19 +147,21 @@ public class TeacherController : ControllerBase
     }
 
     [HttpGet("results/export/excel")]
-    public async Task<IActionResult> ExportExcel([FromQuery] Guid examId)
+    public async Task<IActionResult> ExportExcel([FromQuery] string? examName)
     {
-        var bytes = await _teacherService.ExportExcelAsync(GetUserId(), examId);
-        _logger.LogInformation("Excel export yapıldı (ExamId: {ExamId})", examId);
-        return File(bytes, "text/csv", $"sonuclar_{examId}.csv");
+        var bytes = await _teacherService.ExportExcelAsync(GetUserId(), examName);
+        var safeName = string.IsNullOrEmpty(examName) ? "tum_sonuclar" : examName.Replace(" ", "_");
+        _logger.LogInformation("Excel export yapıldı (ExamName: {ExamName})", examName);
+        return File(bytes, "text/csv;charset=utf-8", $"{safeName}.csv");
     }
 
     [HttpGet("results/export/pdf")]
-    public async Task<IActionResult> ExportPdf([FromQuery] Guid examId)
+    public async Task<IActionResult> ExportPdf([FromQuery] string? examName)
     {
-        var bytes = await _teacherService.ExportPdfAsync(GetUserId(), examId);
-        _logger.LogInformation("PDF export yapıldı (ExamId: {ExamId})", examId);
-        return File(bytes, "application/pdf", $"sonuclar_{examId}.pdf");
+        var bytes = await _teacherService.ExportPdfAsync(GetUserId(), examName);
+        var safeName = string.IsNullOrEmpty(examName) ? "tum_sonuclar" : examName.Replace(" ", "_");
+        _logger.LogInformation("PDF export yapıldı (ExamName: {ExamName})", examName);
+        return File(bytes, "text/csv;charset=utf-8", $"{safeName}.csv");
     }
 
     // Students

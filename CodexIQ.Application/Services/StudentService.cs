@@ -128,6 +128,8 @@ namespace CodexIQ.Application.Services
                 CodePurpose = paper.Exam.CodePurpose,
                 Date = paper.FinalEvaluation.EvaluatedAt,
                 TotalScore = paper.FinalEvaluation.FinalScore,
+                IsOverridden = paper.FinalEvaluation.IsOverridden,
+                OriginalScore = paper.FinalEvaluation.IsOverridden ? paper.FinalEvaluation.OriginalScore : null,
                 Code = paper.ExtractedCode?.RawCode ?? string.Empty,
                 TeacherNote = paper.FinalEvaluation.TeacherNote,
                 SyntaxErrors = syntaxErrors,

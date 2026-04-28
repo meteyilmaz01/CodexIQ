@@ -219,10 +219,12 @@ namespace CodexIQ.Infrastructure.Repository
                 .ToListAsync();
         }
 
-        public async Task<List<ExamPaper>> GetExamPapersForExportAsync(Guid teacherId, Guid examId)
+        public async Task<List<ExamPaper>> GetExamPapersForExportAsync(Guid teacherId, string? examName)
         {
             return await _context.ExamPapers
-                .Where(ep => ep.ExamId == examId && ep.Exam.TeacherId == teacherId && ep.FinalEvaluation != null)
+                .Where(ep => ep.Exam.TeacherId == teacherId
+                          && ep.FinalEvaluation != null
+                          && (string.IsNullOrEmpty(examName) || ep.Exam.Name == examName))
                 .Include(ep => ep.Student)
                 .Include(ep => ep.Exam)
                     .ThenInclude(e => e.Course)

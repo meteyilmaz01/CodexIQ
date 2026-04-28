@@ -100,15 +100,20 @@ const TeacherDashboard = () => {
             styles={{ body: { padding: 0 } }}>
             <List dataSource={Array.isArray(recentUploads) ? recentUploads : []} locale={{ emptyText: "Veri yok" }}
               renderItem={(item: any) => (
-                <List.Item style={{ padding: "14px 20px", borderBottom: colors.listItemBorder, cursor: "pointer" }}>
+                <List.Item
+                  onClick={() => navigate(`/teacher/results?exam=${encodeURIComponent(item.examName || item.name || "")}`)}
+                  style={{ padding: "14px 20px", borderBottom: colors.listItemBorder, cursor: "pointer", transition: "background 0.15s" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = colors.containerBg)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
                   <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <CloudUploadOutlined style={{ color: colors.accent }} />
-                        <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{item.name || item.examName}</Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{item.examName || item.name}</Text>
                       </div>
                       <Text style={{ color: colors.textMuted, fontSize: 12, marginLeft: 22 }}>
-                        {item.count || item.paperCount || 0} {t("papers")} • {item.date || item.createdAt}
+                        {item.paperCount || item.count || 0} {t("papers")} • {item.date || item.createdAt}
                       </Text>
                     </div>
                     {getStatusTag(item.status)}

@@ -30,10 +30,10 @@ export const teacherApi = {
   shareResult: (id: string) => api.put(`/teacher/results/${id}/share`).then((r) => r.data),
   bulkShare: (examPaperIds: string[]) =>
     api.put("/teacher/results/bulk-share", { examPaperIds }).then((r) => r.data),
-  exportExcel: (examId: string) =>
-    api.get("/teacher/results/export/excel", { params: { examId }, responseType: "blob" }),
-  exportPdf: (examId: string) =>
-    api.get("/teacher/results/export/pdf", { params: { examId }, responseType: "blob" }),
+  exportExcel: (examName?: string) =>
+    api.get("/teacher/results/export/excel", { params: examName ? { examName } : {}, responseType: "blob" }),
+  exportPdf: (examName?: string) =>
+    api.get("/teacher/results/export/pdf", { params: examName ? { examName } : {}, responseType: "blob" }),
 
   getStudents: (classId?: string) =>
     api.get("/teacher/students", { params: classId ? { classId } : {} }).then((r) => r.data),

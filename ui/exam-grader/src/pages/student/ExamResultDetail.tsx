@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Card, Typography, Tag, Button, Row, Col, Collapse, Tooltip, Divider, Switch, Spin } from "antd";
+import { Card, Typography, Tag, Button, Row, Col, Collapse, Tooltip, Divider, Switch, Spin, Alert } from "antd";
 import {
   ArrowLeftOutlined, BulbOutlined, WarningOutlined, BugOutlined,
-  CheckCircleOutlined, InfoCircleOutlined, BookOutlined,
+  CheckCircleOutlined, InfoCircleOutlined, BookOutlined, EditOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
@@ -54,6 +54,8 @@ const ExamResultDetail = () => {
     ? rawModelScores.map((m: any) => ({ name: m.modelName ?? m.name ?? "model", score: Number(m.score) || 0 }))
     : Object.entries(rawModelScores).map(([name, score]: [string, any]) => ({ name, score: Number(score) || 0 }));
   const totalScore = data.toplam_puan ?? data.totalScore ?? data.score ?? 0;
+  const isOverridden: boolean = data.isOverridden ?? false;
+  const originalScore: number | null = data.originalScore ?? null;
   const code = data.code || "";
   const codePurpose = data.code_purpose || data.codePurpose || "";
   const teacherNote = data.ogretmene_not || data.teacherNote || "";
@@ -92,6 +94,24 @@ const ExamResultDetail = () => {
           <Switch checked={educationMode} onChange={setEducationMode} />
         </div>
       </div>
+
+      {isOverridden && originalScore !== null && (
+        <Alert
+          icon={<EditOutlined />}
+          showIcon
+          type="warning"
+          style={{ marginBottom: 20, borderRadius: 10 }}
+          message={
+            <span>
+              Puanınız öğretmen tarafından{" "}
+              <strong style={{ fontFamily: "'JetBrains Mono'" }}>{originalScore}</strong>
+              {" "}'den{" "}
+              <strong style={{ fontFamily: "'JetBrains Mono'", color: getScoreColor(totalScore) }}>{totalScore}</strong>
+              {" "}'ye güncellendi.
+            </span>
+          }
+        />
+      )}
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={12} sm={6}>

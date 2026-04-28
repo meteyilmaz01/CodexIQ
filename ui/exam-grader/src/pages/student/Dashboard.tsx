@@ -10,6 +10,7 @@ import {
   WarningOutlined,
   BookOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
 import { studentApi } from "../../api/studentApi";
@@ -18,6 +19,7 @@ import { useAppStore } from "../../store/useAppStore";
 const { Title, Text } = Typography;
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const colors = useThemeColors();
   const t = useT();
   const user = useAppStore((s) => s.user);
@@ -112,11 +114,16 @@ const Dashboard = () => {
               dataSource={recentResults}
               locale={{ emptyText: t("noData") || "Veri yok" }}
               renderItem={(item: any) => (
-                <List.Item style={{ padding: "14px 20px", borderBottom: colors.listItemBorder, cursor: "pointer" }}>
+                <List.Item
+                  onClick={() => navigate(`/student/results/${item.id}`)}
+                  style={{ padding: "14px 20px", borderBottom: colors.listItemBorder, cursor: "pointer", transition: "background 0.15s" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = colors.containerBg)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
                   <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
                     <div>
                       <Text style={{ color: colors.textSecondary, fontSize: 14, display: "block" }}>{item.examName || item.name}</Text>
-                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>{item.date}</Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>{item.courseName} • {new Date(item.uploadedAt).toLocaleDateString("tr-TR")}</Text>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <span style={{ fontSize: 20, fontWeight: 700, color: getScoreColor(item.finalScore ?? item.score ?? item.totalScore ?? 0), fontFamily: "'JetBrains Mono'" }}>
