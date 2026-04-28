@@ -122,6 +122,14 @@ public class TeacherController : ControllerBase
         return Ok(new { success = true, message = "Puan güncellendi" });
     }
 
+    [HttpPut("results/{id:guid}/rubric-scores")]
+    public async Task<IActionResult> UpdateRubricScores(Guid id, [FromBody] UpdateRubricScoresDto dto)
+    {
+        await _teacherService.UpdateRubricScoresAsync(GetUserId(), id, dto);
+        _logger.LogInformation("Rubric skorları güncellendi (ExamPaperId: {Id})", id);
+        return Ok(new { success = true, message = "Rubric skorları güncellendi" });
+    }
+
     [HttpPut("results/{id:guid}/note")]
     public async Task<IActionResult> UpdateNote(Guid id, [FromBody] UpdateNoteRequestDto request)
     {

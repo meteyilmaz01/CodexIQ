@@ -70,6 +70,7 @@ const ExamResultDetail = () => {
 
   const syntaxErrors = data.syntax_hatalari || data.syntaxErrors || [];
   const logicErrors = data.mantik_hatalari || data.logicErrors || [];
+  const rubricBreakdown: { criteria: string; maxPoints: number; earnedPoints: number }[] = data.rubricBreakdown || [];
   const rawModelScores = data.model_scores || data.modelScores || {};
   // Backend array [{modelName, score}] döndürüyor; eski dict formatını da destekle
   const modelScoresList: { name: string; score: number }[] = Array.isArray(rawModelScores)
@@ -82,9 +83,22 @@ const ExamResultDetail = () => {
   const codePurpose = data.code_purpose || data.codePurpose || "";
   const teacherNote = data.ogretmene_not || data.teacherNote || "";
 
+  const totalLines = code ? code.split("\n").length : 0;
+
+  const isValidLine = (line: number) => line > 0 && line <= totalLines;
+
+  const lineTag = (line: number, isLogic: boolean) => {
+    if (!isValidLine(line)) return <Tag color={isLogic ? "error" : "warning"} style={{ borderRadius: 4 }}>Satır ?</Tag>;
+    if (isLogic) return <Tag color="error" style={{ borderRadius: 4 }}>~{t("line")} {line}</Tag>;
+    return <Tag color="warning" style={{ borderRadius: 4 }}>{t("line")} {line}</Tag>;
+  };
+
   const renderCodeWithHighlights = () => {
     const lines = code.split("\n");
-    const errorLines = new Set([...syntaxErrors.map((e: any) => e.line), ...logicErrors.map((e: any) => e.line)]);
+    const errorLines = new Set([
+      ...syntaxErrors.filter((e: any) => isValidLine(e.line)).map((e: any) => e.line),
+      ...logicErrors.filter((e: any) => isValidLine(e.line)).map((e: any) => e.line),
+    ]);
     return (
       <pre style={{ margin: 0, padding: 20, fontFamily: "'JetBrains Mono', monospace", fontSize: 13, lineHeight: 1.8, overflowX: "auto", color: colors.textCode }}>
         {lines.map((line: string, i: number) => {
@@ -230,7 +244,7 @@ const ExamResultDetail = () => {
               key: `syntax-${i}`,
               label: (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Tag color={err.severity === "error" ? "error" : "warning"} style={{ borderRadius: 4 }}>{t("line")} {err.line}</Tag>
+                  {lineTag(err.line, false)}
                   <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{err.description}</Text>
                 </div>
               ),
@@ -253,7 +267,7 @@ const ExamResultDetail = () => {
               key: `logic-${i}`,
               label: (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Tag color="error" style={{ borderRadius: 4 }}>{t("line")} {err.line}</Tag>
+                  {lineTag(err.line, true)}
                   <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{err.description}</Text>
                 </div>
               ),
@@ -274,6 +288,31 @@ const ExamResultDetail = () => {
             <Card title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}><CheckCircleOutlined style={{ marginRight: 8, color: "#52c41a" }} />{t("teacherNote")}</span>}
               style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16 }}>
               <Paragraph style={{ color: colors.textHint, fontSize: 14, margin: 0 }}>{teacherNote}</Paragraph>
+            </Card>
+          )}
+
+          {rubricBreakdown.length > 0 && (
+            <Card
+              title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}> Puanlama Kriterleri</span>}
+              style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16 }}
+            >
+              {rubricBreakdown.map((item, i) => {
+                const pct = item.maxPoints > 0 ? Math.round((item.earnedPoints / item.maxPoints) * 100) : 0;
+                const color = pct >= 85 ? "#52c41a" : pct >= 60 ? "#faad14" : "#ff4d4f";
+                return (
+                  <div key={i} style={{ marginBottom: i < rubricBreakdown.length - 1 ? 14 : 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{item.criteria}</Text>
+                      <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 700, color, fontSize: 13 }}>
+                        {item.earnedPoints} / {item.maxPoints}
+                      </span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 3, background: colors.dividerColor, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 0.4s" }} />
+                    </div>
+                  </div>
+                );
+              })}
             </Card>
           )}
 

@@ -285,11 +285,24 @@ public class TeacherService : ITeacherService
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
         }
 
-        var rubricScores = paper.Exam.RubricCriterias.Select(r => new RubricScoreDto
+        // JSON'dan gerçek per-criteria skorları oku, yoksa orantılı tahmin yap
+        List<RubricBreakdownItemDto> storedBreakdown = new();
+        if (!string.IsNullOrEmpty(paper.FinalEvaluation.RubricScoresJson))
         {
-            Criteria = r.Criteria,
-            MaxPoints = r.MaxPoints,
-            AiScore = r.MaxPoints 
+            storedBreakdown = JsonSerializer.Deserialize<List<RubricBreakdownItemDto>>(
+                paper.FinalEvaluation.RubricScoresJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+        }
+
+        var rubricScores = paper.Exam.RubricCriterias.Select(r =>
+        {
+            var stored = storedBreakdown.FirstOrDefault(s => s.Criteria == r.Criteria);
+            return new RubricScoreDto
+            {
+                Criteria  = r.Criteria,
+                MaxPoints = r.MaxPoints,
+                AiScore   = stored?.EarnedPoints ?? 0
+            };
         }).ToList();
 
         return new TeacherResultDetailDto
@@ -332,6 +345,24 @@ public class TeacherService : ITeacherService
 
         paper.FinalEvaluation.FinalScore = request.NewScore;
         paper.FinalEvaluation.IsOverridden = true;
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task UpdateRubricScoresAsync(Guid teacherId, Guid examPaperId, UpdateRubricScoresDto dto)
+    {
+        var paper = await _unitOfWork.Teacher.GetResultDetailAsync(teacherId, examPaperId);
+        if (paper?.FinalEvaluation == null) throw new NotFoundException("Sonuç bulunamadı");
+
+        var items = dto.Items.Select(i => new { criteria = i.Criteria, maxPoints = i.MaxPoints, earnedPoints = i.EarnedPoints });
+        paper.FinalEvaluation.RubricScoresJson = JsonSerializer.Serialize(items);
+
+        // Toplam puanı da güncelle (rubric toplamı yeni skor olarak ayarla)
+        var newTotal = dto.Items.Sum(i => i.EarnedPoints);
+        if (!paper.FinalEvaluation.IsOverridden)
+            paper.FinalEvaluation.OriginalScore = paper.FinalEvaluation.FinalScore;
+        paper.FinalEvaluation.FinalScore   = newTotal;
+        paper.FinalEvaluation.IsOverridden = true;
+
         await _unitOfWork.SaveChangesAsync();
     }
 

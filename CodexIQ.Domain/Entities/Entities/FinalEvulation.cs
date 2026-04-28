@@ -17,6 +17,7 @@ namespace CodexIQ.Domain.Entities
         public string? SyntaxErrorsJson { get; set; }   
         public string? LogicErrorsJson { get; set; }    
         public string? TeacherNote { get; set; }
+        public string? RubricScoresJson { get; set; }
         public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
 
         public ExamPaper ExamPaper { get; set; } = null!;

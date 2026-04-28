@@ -120,6 +120,15 @@ namespace CodexIQ.Application.Services
                 ) ?? new();
             }
 
+            var rubricBreakdown = new List<RubricBreakdownItemDto>();
+            if (!string.IsNullOrEmpty(paper.FinalEvaluation.RubricScoresJson))
+            {
+                rubricBreakdown = JsonSerializer.Deserialize<List<RubricBreakdownItemDto>>(
+                    paper.FinalEvaluation.RubricScoresJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                ) ?? new();
+            }
+
             return new ExamResultDetailDto
             {
                 Id = paper.Id,
@@ -138,7 +147,8 @@ namespace CodexIQ.Application.Services
                 {
                     ModelName = ai.ModelName,
                     Score = ai.Score
-                }).ToList()
+                }).ToList(),
+                RubricBreakdown = rubricBreakdown
             };
         }
 

@@ -23,6 +23,7 @@ public interface ITeacherService
         Guid teacherId, string? search, string? course, string? exam, string? sortBy, int page, int pageSize);
     Task<TeacherResultDetailDto?> GetResultDetailAsync(Guid teacherId, Guid examPaperId);
     Task OverrideScoreAsync(Guid teacherId, Guid examPaperId, OverrideScoreRequestDto request);
+    Task UpdateRubricScoresAsync(Guid teacherId, Guid examPaperId, UpdateRubricScoresDto dto);
     Task UpdateNoteAsync(Guid teacherId, Guid examPaperId, UpdateNoteRequestDto request);
     Task ShareResultAsync(Guid teacherId, Guid examPaperId);
     Task BulkShareAsync(Guid teacherId, BulkShareRequestDto request);

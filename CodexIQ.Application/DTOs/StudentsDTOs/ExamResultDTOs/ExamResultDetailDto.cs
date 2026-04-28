@@ -15,4 +15,5 @@ public class ExamResultDetailDto
     public List<CodeErrorDto> SyntaxErrors { get; set; } = new();
     public List<CodeErrorDto> LogicErrors { get; set; } = new();
     public List<ModelScoreDto> ModelScores { get; set; } = new();
+    public List<RubricBreakdownItemDto> RubricBreakdown { get; set; } = new();
 }

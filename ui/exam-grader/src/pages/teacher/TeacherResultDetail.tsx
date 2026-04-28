@@ -50,7 +50,14 @@ const TeacherResultDetail = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (isOverridden) {
+      // Rubric varsa per-criteria kaydet (toplam puanı da günceller)
+      if (rubricScores.length > 0) {
+        await teacherApi.updateRubricScores(id!, rubricScores.map((r: any) => ({
+          criteria: r.criteria,
+          maxPoints: r.maxPoints,
+          earnedPoints: r.teacherScore ?? r.aiScore ?? 0,
+        })));
+      } else if (isOverridden) {
         await teacherApi.overrideScore(id!, score);
       }
       if (teacherNote !== (data.ogretmene_not || data.teacherNote || "")) {
@@ -104,9 +111,20 @@ const TeacherResultDetail = () => {
   const code = data.code || "";
   const codePurpose = data.code_purpose || data.codePurpose || "";
 
+  const totalLines = code ? code.split("\n").length : 0;
+  const isValidLine = (line: number) => line > 0 && line <= totalLines;
+  const lineTag = (line: number, isLogic: boolean) => {
+    if (!isValidLine(line)) return <Tag color={isLogic ? "error" : "warning"} style={{ borderRadius: 4 }}>Satır ?</Tag>;
+    if (isLogic) return <Tag color="error" style={{ borderRadius: 4 }}>~Satır {line}</Tag>;
+    return <Tag color="warning" style={{ borderRadius: 4 }}>Satır {line}</Tag>;
+  };
+
   const renderCode = () => {
     const lines = code.split("\n");
-    const errorLines = new Set([...syntaxErrors.map((e: any) => e.line), ...logicErrors.map((e: any) => e.line)]);
+    const errorLines = new Set([
+      ...syntaxErrors.filter((e: any) => isValidLine(e.line)).map((e: any) => e.line),
+      ...logicErrors.filter((e: any) => isValidLine(e.line)).map((e: any) => e.line),
+    ]);
     return (
       <pre style={{ margin: 0, padding: 20, fontFamily: "'JetBrains Mono', monospace", fontSize: 13, lineHeight: 1.8, overflowX: "auto", color: colors.textCode }}>
         {lines.map((line: string, i: number) => {
@@ -208,10 +226,10 @@ const TeacherResultDetail = () => {
             style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16 }}>
             <Collapse ghost items={[
               ...syntaxErrors.map((err: any, i: number) => ({
-                key: `s-${i}`, label: <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Tag color="warning" style={{ borderRadius: 4 }}>{tFunc("line")} {err.line}</Tag><Tag color="orange" style={{ borderRadius: 4, fontSize: 10 }}>SYNTAX</Tag><Text style={{ color: colors.textSecondary, fontSize: 13 }}>{err.description}</Text></div>, children: null,
+                key: `s-${i}`, label: <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{lineTag(err.line, false)}<Tag color="orange" style={{ borderRadius: 4, fontSize: 10 }}>SYNTAX</Tag><Text style={{ color: colors.textSecondary, fontSize: 13 }}>{err.description}</Text></div>, children: null,
               })),
               ...logicErrors.map((err: any, i: number) => ({
-                key: `m-${i}`, label: <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Tag color="error" style={{ borderRadius: 4 }}>{tFunc("line")} {err.line}</Tag><Tag color="red" style={{ borderRadius: 4, fontSize: 10 }}>{tFunc("logic")}</Tag><Text style={{ color: colors.textSecondary, fontSize: 13 }}>{err.description}</Text></div>, children: null,
+                key: `m-${i}`, label: <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{lineTag(err.line, true)}<Tag color="red" style={{ borderRadius: 4, fontSize: 10 }}>{tFunc("logic")}</Tag><Text style={{ color: colors.textSecondary, fontSize: 13 }}>{err.description}</Text></div>, children: null,
               })),
             ]} />
           </Card>

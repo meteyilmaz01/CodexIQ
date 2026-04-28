@@ -51,5 +51,7 @@ export const teacherApi = {
   getRegradeRequestCount: () => api.get("/teacher/regrade-requests/count").then((r) => r.data),
   resolveRegradeRequest: (requestId: string, decision: string, teacherNote?: string, newScore?: number) =>
     api.post(`/teacher/regrade-requests/${requestId}/resolve`, { decision, teacherNote, newScore }).then((r) => r.data),
+  updateRubricScores: (examPaperId: string, items: { criteria: string; maxPoints: number; earnedPoints: number }[]) =>
+    api.put(`/teacher/results/${examPaperId}/rubric-scores`, { items }).then((r) => r.data),
   getAnnouncements: () => api.get("/teacher/announcements").then((r) => r.data),
 };

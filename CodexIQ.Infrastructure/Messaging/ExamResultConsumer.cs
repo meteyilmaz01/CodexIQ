@@ -34,6 +34,8 @@ namespace CodexIQ.Infrastructure.Messaging
                 .Include(p => p.ExtractedCode)
                 .Include(p => p.AIModelResults)
                 .Include(p => p.FinalEvaluation)
+                .Include(p => p.Exam)
+                    .ThenInclude(e => e.RubricCriterias)
                 .FirstOrDefaultAsync(p => p.Id == message.ExamPaperId);
 
             if (paper == null)
@@ -93,6 +95,25 @@ namespace CodexIQ.Infrastructure.Messaging
             var eval = message.Evaluation;
             int finalScore = isFailed ? 0 : (eval?.ToplamPuan ?? 0);
 
+            // Per-criteria orantılı dağıtım
+            string? rubricScoresJson = null;
+            var rubricCriterias = paper.Exam?.RubricCriterias?.ToList();
+            if (rubricCriterias != null && rubricCriterias.Count > 0)
+            {
+                int totalMax = rubricCriterias.Sum(r => r.MaxPoints);
+                double ratio = totalMax > 0 ? (double)finalScore / totalMax : 0;
+                int distributed = 0;
+                var rubricItems = rubricCriterias.Select((r, i) => {
+                    int earned = i == rubricCriterias.Count - 1
+                        ? finalScore - distributed
+                        : (int)Math.Round(r.MaxPoints * ratio);
+                    earned = Math.Max(0, Math.Min(earned, r.MaxPoints));
+                    distributed += earned;
+                    return new { criteria = r.Criteria, maxPoints = r.MaxPoints, earnedPoints = earned };
+                }).ToList();
+                rubricScoresJson = JsonSerializer.Serialize(rubricItems);
+            }
+
    
             var syntaxErrorsJson = SerializeErrors(eval?.SyntaxHatalari ?? new List<HataDetayiMessage>());
             var logicErrorsJson  = SerializeErrors(eval?.MantikHatalari ?? new List<HataDetayiMessage>());
@@ -114,6 +135,7 @@ namespace CodexIQ.Infrastructure.Messaging
                     LogicErrorCount  = eval?.MantikHatalari?.Count ?? 0,
                     SyntaxErrorsJson = syntaxErrorsJson,
                     LogicErrorsJson  = logicErrorsJson,
+                    RubricScoresJson = rubricScoresJson,
                     IsOverridden     = false,
                     IsShared         = false,
                     EvaluatedAt      = DateTime.UtcNow
@@ -135,6 +157,7 @@ namespace CodexIQ.Infrastructure.Messaging
                 paper.FinalEvaluation.LogicErrorCount  = eval?.MantikHatalari?.Count ?? 0;
                 paper.FinalEvaluation.SyntaxErrorsJson = syntaxErrorsJson;
                 paper.FinalEvaluation.LogicErrorsJson  = logicErrorsJson;
+                paper.FinalEvaluation.RubricScoresJson = rubricScoresJson;
                 paper.FinalEvaluation.EvaluatedAt      = DateTime.UtcNow;
                 Console.WriteLine($"[CONSUMER] FinalEvaluation güncellendi: {finalScore}/100");
             }
