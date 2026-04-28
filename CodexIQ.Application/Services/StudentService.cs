@@ -203,5 +203,40 @@ namespace CodexIQ.Application.Services
             return await _unitOfWork.Admin.GetAnnouncementsAsync();
         }
 
+        public async Task<List<ExamNotificationDto>> GetExamNotificationsAsync(Guid studentId)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-14);
+            var papers = await _unitOfWork.Student.GetRecentExamPapersAsync(studentId, 20);
+            var result = new List<ExamNotificationDto>();
+
+            foreach (var ep in papers.Where(ep => ep.FinalEvaluation != null && ep.FinalEvaluation.EvaluatedAt >= cutoff))
+            {
+                result.Add(new ExamNotificationDto
+                {
+                    ExamPaperId = ep.Id,
+                    ExamName    = ep.Exam.Name,
+                    CourseName  = ep.Exam.Course.Name,
+                    EvaluatedAt = ep.FinalEvaluation!.EvaluatedAt,
+                    Type        = "evaluated"
+                });
+
+                if (ep.FinalEvaluation.IsOverridden)
+                {
+                    result.Add(new ExamNotificationDto
+                    {
+                        ExamPaperId   = ep.Id,
+                        ExamName      = ep.Exam.Name,
+                        CourseName    = ep.Exam.Course.Name,
+                        EvaluatedAt   = ep.FinalEvaluation.EvaluatedAt,
+                        Type          = "overridden",
+                        OriginalScore = ep.FinalEvaluation.OriginalScore,
+                        NewScore      = ep.FinalEvaluation.FinalScore
+                    });
+                }
+            }
+
+            return result;
+        }
+
     }
 }

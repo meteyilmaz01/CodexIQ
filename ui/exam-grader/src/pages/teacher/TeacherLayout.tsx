@@ -67,8 +67,8 @@ const TeacherLayout = () => {
   };
 
   const AnnouncementsPopover = () => {
-    const token = useAppStore((s) => s.token);
-    const storageKey = `readAnnouncements:teacher:${(token || "anon").slice(-32)}`;
+    const storeUser = useAppStore((s) => s.user);
+    const storageKey = `readNotifications:${storeUser?.firstName ?? ""}${storeUser?.lastName ?? ""}`;
     const [announcements, setAnnouncements] = useState<any[]>([]);
     const [readIds, setReadIds] = useState<Set<string>>(() => {
       try { return new Set(JSON.parse(localStorage.getItem(storageKey) || "[]")); }
@@ -88,21 +88,25 @@ const TeacherLayout = () => {
 
     useEffect(() => {
       if (open && announcements.length > 0) {
-        const allIds = announcements.map((a: any) => String(a.id));
+        const allIds = announcements.map((a: any) => `ann_${a.id}`);
         const next = new Set([...readIds, ...allIds]);
         setReadIds(next);
         localStorage.setItem(storageKey, JSON.stringify([...next]));
       }
     }, [open, announcements]);
 
-    const unreadCount = announcements.filter((a: any) => !readIds.has(String(a.id))).length;
+    const unreadCount = announcements.filter((a: any) => !readIds.has(`ann_${a.id}`)).length;
 
     const content = (
       <div style={{ width: 300, maxHeight: 400, overflowY: "auto" }}>
         {announcements.length === 0
           ? <Text style={{ color: colors.textMuted }}>Duyuru yok</Text>
           : announcements.map((a: any) => (
-              <div key={a.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: colors.borderSubtle }}>
+              <div key={a.id} style={{
+                marginBottom: 10, paddingBottom: 10, borderBottom: colors.borderSubtle,
+                borderRadius: 6, padding: "8px 10px",
+                background: readIds.has(`ann_${a.id}`) ? "transparent" : `${colors.accent}10`,
+              }}>
                 <Text style={{ color: colors.textSecondary, fontWeight: 600, display: "block" }}>{a.title}</Text>
                 <Text style={{ color: colors.textMuted, fontSize: 12 }}>{a.content}</Text>
               </div>

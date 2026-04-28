@@ -65,52 +65,115 @@ const StudentLayout = () => {
   };
 
   const AnnouncementsPopover = () => {
-    const token = useAppStore((s) => s.token);
-    const storageKey = `readAnnouncements:student:${(token || "anon").slice(-32)}`;
+    const innerNavigate = useNavigate();
+    const storeUser = useAppStore((s) => s.user);
+    // Token yerine kullanıcı adı tabanlı key — her girişte sıfırlanmaz
+    const storageKey = `readNotifications:${storeUser?.firstName ?? ""}${storeUser?.lastName ?? ""}`;
     const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [examNotifs, setExamNotifs] = useState<any[]>([]);
     const [readIds, setReadIds] = useState<Set<string>>(() => {
       try { return new Set(JSON.parse(localStorage.getItem(storageKey) || "[]")); }
       catch { return new Set(); }
     });
     const [open, setOpen] = useState(false);
 
-    const loadAnnouncements = async () => {
-      try {
-        const res = await studentApi.getAnnouncements();
-        const data = res.data || res;
-        setAnnouncements(Array.isArray(data) ? data : data.items || []);
-      } catch { setAnnouncements([]); }
-    };
-
-    useEffect(() => { loadAnnouncements(); }, []);
+    useEffect(() => {
+      studentApi.getAnnouncements()
+        .then((res) => { const d = res.data || res; setAnnouncements(Array.isArray(d) ? d : d.items || []); })
+        .catch(() => setAnnouncements([]));
+      studentApi.getExamNotifications()
+        .then((res) => { const d = res.data || res; setExamNotifs(Array.isArray(d) ? d : []); })
+        .catch(() => setExamNotifs([]));
+    }, []);
 
     useEffect(() => {
-      if (open && announcements.length > 0) {
-        const allIds = announcements.map((a: any) => String(a.id));
-        const next = new Set([...readIds, ...allIds]);
-        setReadIds(next);
-        localStorage.setItem(storageKey, JSON.stringify([...next]));
-      }
-    }, [open, announcements]);
+      if (!open) return;
+      const allIds = [
+        ...announcements.map((a: any) => `ann_${a.id}`),
+        ...examNotifs.map((n: any) => `exam_${n.type}_${n.examPaperId}`),
+      ];
+      if (allIds.length === 0) return;
+      const next = new Set([...readIds, ...allIds]);
+      setReadIds(next);
+      localStorage.setItem(storageKey, JSON.stringify([...next]));
+    }, [open]);
 
-    const unreadCount = announcements.filter((a: any) => !readIds.has(String(a.id))).length;
+    const notifKey = (n: any) => `exam_${n.type}_${n.examPaperId}`;
+
+    const unreadCount =
+      announcements.filter((a: any) => !readIds.has(`ann_${a.id}`)).length +
+      examNotifs.filter((n: any) => !readIds.has(notifKey(n))).length;
+
+    const renderExamNotif = (n: any) => {
+      const isOverride = n.type === "overridden";
+      const key = notifKey(n);
+      const isRead = readIds.has(key);
+      const accentColor = isOverride ? "#faad14" : colors.accent;
+      return (
+        <div
+          key={key}
+          onClick={() => { innerNavigate(`/student/results/${n.examPaperId}`); setOpen(false); }}
+          style={{
+            marginBottom: 10, borderBottom: colors.borderSubtle,
+            cursor: "pointer", borderRadius: 6, padding: "8px 10px",
+            background: isRead ? "transparent" : `${accentColor}15`,
+          }}
+        >
+          <Text style={{ color: isOverride ? "#faad14" : colors.textSecondary, fontWeight: 600, display: "block", fontSize: 13 }}>
+            {isOverride ? "✏️ Puanınız güncellendi" : "📄 Sınavınız değerlendirildi"}
+          </Text>
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+            {n.examName} — {n.courseName}
+          </Text>
+          {isOverride && n.originalScore != null && n.newScore != null && (
+            <Text style={{ color: "#faad14", fontSize: 12, fontWeight: 600 }}>
+              {n.originalScore} → {n.newScore} puan
+            </Text>
+          )}
+          <Text style={{ color: colors.textDimmed, fontSize: 11, display: "block" }}>
+            {new Date(n.evaluatedAt).toLocaleDateString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+          </Text>
+        </div>
+      );
+    };
 
     const content = (
-      <div style={{ width: 300, maxHeight: 400, overflowY: "auto" }}>
-        {announcements.length === 0
-          ? <Text style={{ color: colors.textMuted }}>Duyuru yok</Text>
-          : announcements.map((a: any) => (
-              <div key={a.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: colors.borderSubtle }}>
-                <Text style={{ color: colors.textSecondary, fontWeight: 600, display: "block" }}>{a.title}</Text>
+      <div style={{ width: 320, maxHeight: 440, overflowY: "auto" }}>
+        {examNotifs.length > 0 && (
+          <>
+            <Text style={{ color: colors.accent, fontSize: 11, fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>
+              SINAV BİLDİRİMLERİ
+            </Text>
+            {examNotifs.map(renderExamNotif)}
+          </>
+        )}
+
+        {announcements.length > 0 && (
+          <>
+            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8, marginTop: examNotifs.length > 0 ? 8 : 0 }}>
+              DUYURULAR
+            </Text>
+            {announcements.map((a: any) => (
+              <div key={a.id} style={{
+                marginBottom: 10, paddingBottom: 10, borderBottom: colors.borderSubtle,
+                borderRadius: 6, padding: "8px 10px",
+                background: readIds.has(`ann_${a.id}`) ? "transparent" : `${colors.accent}10`,
+              }}>
+                <Text style={{ color: colors.textSecondary, fontWeight: 600, display: "block", fontSize: 13 }}>{a.title}</Text>
                 <Text style={{ color: colors.textMuted, fontSize: 12 }}>{a.content}</Text>
               </div>
-            ))
-        }
+            ))}
+          </>
+        )}
+
+        {announcements.length === 0 && examNotifs.length === 0 && (
+          <Text style={{ color: colors.textMuted }}>Bildirim yok</Text>
+        )}
       </div>
     );
 
     return (
-      <Popover content={content} title="Duyurular" trigger="click" open={open} onOpenChange={setOpen} placement="bottomRight">
+      <Popover content={content} title="Bildirimler" trigger="click" open={open} onOpenChange={setOpen} placement="bottomRight">
         <Badge count={unreadCount} size="small" style={{ cursor: "pointer" }}>
           <BellOutlined style={{ fontSize: 18, color: colors.textSubtle, cursor: "pointer" }} />
         </Badge>

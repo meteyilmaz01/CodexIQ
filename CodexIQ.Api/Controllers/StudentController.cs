@@ -127,6 +127,13 @@ public class StudentController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("exam-notifications")]
+    public async Task<IActionResult> GetExamNotifications()
+    {
+        var result = await _studentService.GetExamNotificationsAsync(GetUserId());
+        return Ok(result);
+    }
+
     [HttpPost("convert-code")]
     public async Task<IActionResult> ConvertCode([FromBody] ConvertCodeRequestDto request)
     {
