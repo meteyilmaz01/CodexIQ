@@ -7,6 +7,9 @@ using CodexIQ.Domain.Entities;
 using CodexIQ.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 public class TeacherService : ITeacherService
 {
@@ -385,7 +388,94 @@ public class TeacherService : ITeacherService
 
     public async Task<byte[]> ExportPdfAsync(Guid teacherId, string? examName)
     {
-        return await ExportExcelAsync(teacherId, examName);
+        var papers = await _unitOfWork.Teacher.GetExamPapersForExportAsync(teacherId, examName);
+
+        QuestPDF.Settings.License = LicenseType.Community;
+
+        return Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(30);
+                page.DefaultTextStyle(t => t.FontSize(10).FontFamily("Arial"));
+
+                page.Header().Column(col =>
+                {
+                    col.Item().Text(string.IsNullOrEmpty(examName) ? "Tüm Sınav Sonuçları" : examName)
+                        .FontSize(16).Bold().FontColor(Colors.Blue.Medium);
+                    col.Item().Text($"Oluşturulma: {DateTime.Now:dd.MM.yyyy HH:mm}")
+                        .FontSize(9).FontColor(Colors.Grey.Medium);
+                    col.Item().PaddingTop(6).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+                });
+
+                page.Content().PaddingTop(12).Table(table =>
+                {
+                    table.ColumnsDefinition(c =>
+                    {
+                        c.RelativeColumn(2.5f);
+                        c.RelativeColumn(2.5f);
+                        c.RelativeColumn(2f);
+                        c.RelativeColumn(1.5f);
+                        c.RelativeColumn(0.8f);
+                        c.RelativeColumn(0.8f);
+                        c.RelativeColumn(0.8f);
+                        c.RelativeColumn(1f);
+                    });
+
+                    static IContainer HeaderCell(IContainer c) =>
+                        c.Background(Colors.Blue.Medium).Padding(5).AlignCenter().AlignMiddle();
+
+                    static IContainer DataCell(IContainer c) =>
+                        c.BorderBottom(1).BorderColor(Colors.Grey.Lighten2).Padding(4).AlignMiddle();
+
+                    string[] headers = { "Öğrenci", "E-posta", "Sınav", "Ders", "Puan", "Syntax", "Mantık", "Paylaşıldı" };
+                    table.Header(header =>
+                    {
+                        foreach (var h in headers)
+                            header.Cell().Element(HeaderCell).Text(h).FontColor(Colors.White).Bold().FontSize(9);
+                    });
+
+                    foreach (var ep in papers)
+                    {
+                        var studentName = ep.Student != null ? $"{ep.Student.FirstName} {ep.Student.LastName}" : "OCR Bekleniyor";
+                        var score       = ep.FinalEvaluation!.FinalScore;
+                        var scoreColor  = score >= 85 ? Colors.Green.Medium
+                                        : score >= 70 ? Colors.Blue.Medium
+                                        : score >= 50 ? Colors.Orange.Medium
+                                        : Colors.Red.Medium;
+
+                        string[] cells =
+                        {
+                            studentName,
+                            ep.Student?.Email ?? "",
+                            ep.Exam.Name,
+                            ep.Exam.Course.Name,
+                            score.ToString(),
+                            ep.FinalEvaluation.SyntaxErrorCount.ToString(),
+                            ep.FinalEvaluation.LogicErrorCount.ToString(),
+                            ep.FinalEvaluation.IsShared ? "Evet" : "Hayır"
+                        };
+
+                        for (int i = 0; i < cells.Length; i++)
+                        {
+                            var isScore = i == 4;
+                            var txt = table.Cell().Element(DataCell).Text(cells[i])
+                                .FontColor(isScore ? scoreColor : Colors.Black);
+                            if (isScore) txt.Bold();
+                        }
+                    }
+                });
+
+                page.Footer().AlignCenter().Text(t =>
+                {
+                    t.Span("Sayfa ").FontSize(8).FontColor(Colors.Grey.Medium);
+                    t.CurrentPageNumber().FontSize(8).FontColor(Colors.Grey.Medium);
+                    t.Span(" / ").FontSize(8).FontColor(Colors.Grey.Medium);
+                    t.TotalPages().FontSize(8).FontColor(Colors.Grey.Medium);
+                });
+            });
+        }).GeneratePdf();
     }
 
     public async Task<List<TeacherStudentListItemDto>> GetStudentsAsync(Guid teacherId, Guid? classId)

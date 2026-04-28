@@ -52,10 +52,13 @@ const TeacherResults = () => {
         ? await teacherApi.exportExcel(examFilter || undefined)
         : await teacherApi.exportPdf(examFilter || undefined);
       const safeName = examFilter ? examFilter.replace(/ /g, "_") : "tum_sonuclar";
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv;charset=utf-8" }));
+      const isExcel = type === "excel";
+      const mimeType = isExcel ? "text/csv;charset=utf-8" : "application/pdf";
+      const extension = isExcel ? "csv" : "pdf";
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: mimeType }));
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${safeName}.csv`;
+      link.download = `${safeName}.${extension}`;
       link.click();
       window.URL.revokeObjectURL(url);
       message.success(`${type.toUpperCase()} ${t("downloading")}...`);

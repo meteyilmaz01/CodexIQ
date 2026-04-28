@@ -161,7 +161,7 @@ public class TeacherController : ControllerBase
         var bytes = await _teacherService.ExportPdfAsync(GetUserId(), examName);
         var safeName = string.IsNullOrEmpty(examName) ? "tum_sonuclar" : examName.Replace(" ", "_");
         _logger.LogInformation("PDF export yapıldı (ExamName: {ExamName})", examName);
-        return File(bytes, "text/csv;charset=utf-8", $"{safeName}.csv");
+        return File(bytes, "application/pdf", $"{safeName}.pdf");
     }
 
     // Students
