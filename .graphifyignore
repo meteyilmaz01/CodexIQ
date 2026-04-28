@@ -1,6 +1,0 @@
-bin/
-obj/
-.git/
-.vs/
-packages/
-node_modules/
