@@ -192,15 +192,15 @@ const CodeTest = () => {
                 {/* Output Panel */}
                 <Col xs={24} lg={10}>
                   <Card
-                    title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>Değerlendirme</span>}
+                    title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>{t("codeTestEvaluation")}</span>}
                     extra={(output || result) && <Button type="text" size="small" icon={<DeleteOutlined />} onClick={() => { setOutput(""); setResult(null); }} style={{ color: colors.textMuted }} />}
                     style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, height: "100%" }}
                   >
                     {running ? (
                       <div style={{ textAlign: "center", padding: "40px 0" }}>
                         <Spin indicator={<LoadingOutlined style={{ fontSize: 24, color: colors.accent }} />} />
-                        <Text style={{ display: "block", color: colors.textMuted, marginTop: 12 }}>Jüri + hakem değerlendiriyor…</Text>
-                        <Text style={{ display: "block", color: colors.textDimmed, fontSize: 12, marginTop: 4 }}>~30-60 sn sürebilir</Text>
+                        <Text style={{ display: "block", color: colors.textMuted, marginTop: 12 }}>{t("codeTestJuryEvaluating")}</Text>
+                        <Text style={{ display: "block", color: colors.textDimmed, fontSize: 12, marginTop: 4 }}>{t("codeTestEvalTime")}</Text>
                       </div>
                     ) : result ? (
                       <div>
@@ -216,7 +216,7 @@ const CodeTest = () => {
                         {/* Hakem özeti */}
                         {result.hakemOzeti && (
                           <div style={{ marginBottom: 12 }}>
-                            <Text strong style={{ color: colors.textPrimary, fontSize: 13 }}>Hakem Özeti</Text>
+                            <Text strong style={{ color: colors.textPrimary, fontSize: 13 }}>{t("codeTestJurySummary")}</Text>
                             <div style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap" }}>{result.hakemOzeti}</div>
                           </div>
                         )}
@@ -224,7 +224,7 @@ const CodeTest = () => {
                         {/* Genel değerlendirme */}
                         {result.genelDegerlendirme && (
                           <div style={{ marginBottom: 12 }}>
-                            <Text strong style={{ color: colors.textPrimary, fontSize: 13 }}>Genel Değerlendirme</Text>
+                            <Text strong style={{ color: colors.textPrimary, fontSize: 13 }}>{t("codeTestGeneralEval")}</Text>
                             <div style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap" }}>{result.genelDegerlendirme}</div>
                           </div>
                         )}
@@ -233,7 +233,7 @@ const CodeTest = () => {
                         {result.syntaxErrors?.length > 0 && (
                           <Collapse size="small" ghost items={[{
                             key: "syntax",
-                            label: <span><Tag color="warning">Syntax</Tag> {result.syntaxErrors.length} hata</span>,
+                            label: <span><Tag color="warning">Syntax</Tag> {result.syntaxErrors.length} {t("codeTestSyntaxErrors")}</span>,
                             children: (
                               <div>{result.syntaxErrors.map((e: any, i: number) => (
                                 <div key={i} style={{ marginBottom: 8, paddingLeft: 8, borderLeft: "2px solid #faad14" }}>
@@ -251,7 +251,7 @@ const CodeTest = () => {
                         {result.logicErrors?.length > 0 && (
                           <Collapse size="small" ghost items={[{
                             key: "logic",
-                            label: <span><Tag color="error">Mantık</Tag> {result.logicErrors.length} hata</span>,
+                            label: <span><Tag color="error">{t("codeTestLogic")}</Tag> {result.logicErrors.length} {t("codeTestLogicErrors")}</span>,
                             children: (
                               <div>{result.logicErrors.map((e: any, i: number) => (
                                 <div key={i} style={{ marginBottom: 8, paddingLeft: 8, borderLeft: "2px solid #ff4d4f" }}>
@@ -269,7 +269,7 @@ const CodeTest = () => {
                         {result.gelisimAlanlari?.length > 0 && (
                           <Collapse size="small" ghost items={[{
                             key: "gelisim",
-                            label: <span><Tag color="processing">Gelişim</Tag> {result.gelisimAlanlari.length} alan</span>,
+                            label: <span><Tag color="processing">{t("codeTestGrowth")}</Tag> {result.gelisimAlanlari.length} {t("codeTestGrowthAreas")}</span>,
                             children: (
                               <div>{result.gelisimAlanlari.map((g: any, i: number) => (
                                 <div key={i} style={{ marginBottom: 10, paddingLeft: 8, borderLeft: "2px solid #1890ff" }}>
