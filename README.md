@@ -14,6 +14,10 @@
 
 [Özellikler](#özellikler) · [Mimari](#mimari) · [API Referansı](#api-referansı) · [Kurulum](#kurulum) · [Teknoloji Yığını](#teknoloji-yığını)
 
+<br/>
+
+![Landing](assets/landing.png)
+
 </div>
 
 ---
@@ -34,6 +38,9 @@ Geleneksel sınav değerlendirme süreçleri zaman alıcı ve öğretmenler içi
 ## Özellikler
 
 ### Öğretmen
+
+![Teacher Dashboard](assets/teacher-dashboard.png)
+
 - Çoklu sınav kağıdı yükleme (PDF otomatik sayfa bölme + görsel)
 - Rubrik tanımlama (kriter adı + maksimum puan)
 - AI değerlendirmesini tek tıkla başlatma
@@ -44,6 +51,9 @@ Geleneksel sınav değerlendirme süreçleri zaman alıcı ve öğretmenler içi
 - Öğrenci istatistikleri ve sınıf analitikleri
 
 ### Öğrenci
+
+![Student Dashboard](assets/student-dashboard.png)
+
 - Paylaşılan sınav sonuçlarını görüntüleme
 - Orijinal sınav kağıdı görselini inceleme
 - Syntax ve mantık hatalarının detaylı açıklamasını okuma
@@ -55,6 +65,11 @@ Geleneksel sınav değerlendirme süreçleri zaman alıcı ve öğretmenler içi
 - Öğretmenlerle gerçek zamanlı mesajlaşma
 
 ### Admin
+
+| Admin Dashboard | RabbitMQ İzleme |
+|---|---|
+| ![Admin Dashboard](assets/admin-dashboard.png) | ![RabbitMQ](assets/admin-rabbitmqmonitoring.png) |
+
 - Kullanıcı yönetimi (CRUD, rol atama, aktif/pasif)
 - Sınıf ve ders yönetimi
 - Duyuru oluşturma
@@ -111,6 +126,10 @@ CodexIQ.Api/             → Controller'lar, Middleware, Program.cs
 CodexIQ.Frontend/        → React 19 + TypeScript (Vite)
 CodexIQ.Worker/          → Python AI değerlendirme worker'ı
 ```
+
+| Öğretmen Analitik | Öğrenci Kod Test |
+|---|---|
+| ![Teacher Analytics](assets/teacher-classanalytics.png) | ![Code Test](assets/student-codetest.png) |
 
 ### AI Değerlendirme Akışı
 
