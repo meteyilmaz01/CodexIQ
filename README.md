@@ -10,9 +10,11 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql)](https://postgresql.org/)
 [![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.x-FF6600?style=flat-square&logo=rabbitmq)](https://rabbitmq.com/)
 
-**CodexIQ**, el yazısıyla yazılmış programlama sınav kağıtlarını yapay zeka ile otomatik olarak değerlendiren bir eğitim platformudur. Öğretmenler taranmış sınav kağıtlarını yükler, üç farklı büyük dil modeli paralel olarak değerlendirme yapar ve sonuçlar öğrencilerle paylaşılır.
+**CodexIQ** is an AI-powered education platform that automatically grades handwritten programming exam papers. Teachers upload scanned exam sheets, three large language models evaluate them in parallel, and results are shared with students.
 
-[Özellikler](#özellikler) · [Mimari](#mimari) · [API Referansı](#api-referansı) · [Kurulum](#kurulum) · [Teknoloji Yığını](#teknoloji-yığını)
+[Features](#features) · [Architecture](#architecture) · [API Reference](#api-reference) · [Setup](#setup) · [Tech Stack](#tech-stack)
+
+[🇹🇷 Türkçe](README.tr.md)
 
 <br/>
 
@@ -22,64 +24,64 @@
 
 ---
 
-## Genel Bakış
+## Overview
 
-Geleneksel sınav değerlendirme süreçleri zaman alıcı ve öğretmenler için yük oluşturmaktadır. CodexIQ bu süreci tamamen otomatize eder:
+Traditional exam grading is time-consuming and burdensome for teachers. CodexIQ fully automates this process:
 
-1. Öğretmen sınav kağıtlarını platforma yükler
-2. Gemini Vision ile el yazısı OCR yapılır, öğrenci bilgisi ve kod çıkarılır
-3. **Gemini**, **Groq Llama** ve **DeepSeek** üç paralel jüri olarak değerlendirme yapar
-4. Bir hakem model (Groq Llama JSON mode) üç jürinin kararını sentezler
-5. Syntax ve mantık hataları, rubrik puanları, kişisel geri bildirim üretilir
-6. Öğrenci, kendi sınav kağıdını, puanını ve AI geri bildirimini platform üzerinden görür
+1. Teacher uploads scanned exam papers to the platform
+2. Gemini Vision performs handwriting OCR — extracts student info and code
+3. **Gemini**, **Groq Llama** and **DeepSeek** evaluate in parallel as three independent juries
+4. A judge model (Groq Llama in JSON mode) synthesizes all three jury verdicts
+5. Syntax errors, logic errors, rubric scores and personalized feedback are generated
+6. Students view their original paper, score and AI feedback through the platform
 
 ---
 
-## Özellikler
+## Features
 
-### Öğretmen
+### Teacher
 
 ![Teacher Dashboard](assets/teacher-dashboard.png)
 
-- Çoklu sınav kağıdı yükleme (PDF otomatik sayfa bölme + görsel)
-- Rubrik tanımlama (kriter adı + maksimum puan)
-- AI değerlendirmesini tek tıkla başlatma
-- Not geçersiz kılma (manual override) ve öğretmen notu ekleme
-- Sonuçları öğrencilerle toplu veya tekil paylaşma
-- Excel (CSV) ve PDF export
-- İtiraz taleplerini yönetme
-- Öğrenci istatistikleri ve sınıf analitikleri
+- Upload multiple exam papers (PDF auto-split by page + image)
+- Define rubric criteria (name + max points per criterion)
+- Trigger AI evaluation with a single click
+- Manual score override and teacher note per paper
+- Share results with students individually or in bulk
+- Export results to Excel (CSV) and PDF
+- Manage student grade appeal requests
+- Student statistics and class-level analytics
 
-### Öğrenci
+### Student
 
 ![Student Dashboard](assets/student-dashboard.png)
 
-- Paylaşılan sınav sonuçlarını görüntüleme
-- Orijinal sınav kağıdı görselini inceleme
-- Syntax ve mantık hatalarının detaylı açıklamasını okuma
-- Not itirazı oluşturma
-- Kişisel zayıf konu analizi
-- AI tarafından üretilen kişiselleştirilmiş gelişim önerileri
-- El yazısı kodu OCR ile metne çevirme aracı
-- Kod çalıştırma sandbox'ı
-- Öğretmenlerle gerçek zamanlı mesajlaşma
+- View shared exam results and scores
+- Inspect original scanned exam paper image
+- Read detailed syntax and logic error explanations with fix hints
+- Submit grade appeal requests
+- Personal weak topic analysis
+- AI-generated personalized improvement suggestions
+- Handwritten code → text OCR tool
+- Code execution sandbox
+- Real-time messaging with teachers
 
 ### Admin
 
-| Admin Dashboard | RabbitMQ İzleme |
+| Admin Dashboard | RabbitMQ Monitoring |
 |---|---|
 | ![Admin Dashboard](assets/admin-dashboard.png) | ![RabbitMQ](assets/admin-rabbitmqmonitoring.png) |
 
-- Kullanıcı yönetimi (CRUD, rol atama, aktif/pasif)
-- Sınıf ve ders yönetimi
-- Duyuru oluşturma
-- Gerçek zamanlı sistem log akışı
-- API kullanım maliyeti takibi
-- RabbitMQ kuyruk durumu izleme
+- User management (CRUD, role assignment, active/inactive toggle)
+- Class and course management
+- Announcement creation and management
+- Real-time system log streaming
+- API usage cost tracking
+- RabbitMQ queue status monitoring
 
 ---
 
-## Mimari
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -103,8 +105,8 @@ Geleneksel sınav değerlendirme süreçleri zaman alıcı ve öğretmenler içi
 │  └────┬────┘ │  ├────────────────────┤  │                        │
 │       │      │  │  CodexIQ.Domain   │  │                        │
 │  ┌────▼────┐ │  │  (Entities/Enums) │  │                        │
-│  │Hakem    │ │  └────────┬───────────┘  │                        │
-│  │(Judge)  │ │           │              │                        │
+│  │ Judge   │ │  └────────┬───────────┘  │                        │
+│  │(Hakem)  │ │           │              │                        │
 │  └────┬────┘ │      PostgreSQL          │                        │
 │       │      │                          │                        │
 │  insight_    │  ┌─────────────────────┐ │                        │
@@ -116,35 +118,35 @@ Geleneksel sınav değerlendirme süreçleri zaman alıcı ve öğretmenler içi
 └──────────────┴──┴─────────────────────┴─┴────────────────────────┘
 ```
 
-### Katman Yapısı (Clean Architecture)
+### Layer Structure (Clean Architecture)
 
 ```
-CodexIQ.Domain/          → Entity'ler, Enum'lar (bağımlılık yok)
-CodexIQ.Application/     → Interface'ler, Service'ler, DTO'lar, Validatörler
+CodexIQ.Domain/          → Entities, Enums (no dependencies)
+CodexIQ.Application/     → Interfaces, Services, DTOs, Validators
 CodexIQ.Infrastructure/  → EF Core, Repository, Messaging, SignalR, Auth
-CodexIQ.Api/             → Controller'lar, Middleware, Program.cs
+CodexIQ.Api/             → Controllers, Middleware, Program.cs
 CodexIQ.Frontend/        → React 19 + TypeScript (Vite)
-CodexIQ.Worker/          → Python AI değerlendirme worker'ı
+CodexIQ.Worker/          → Python AI grading worker
 ```
 
-| Öğretmen Analitik | Öğrenci Kod Test |
+| Teacher Analytics | Student Code Test |
 |---|---|
 | ![Teacher Analytics](assets/teacher-classanalytics.png) | ![Code Test](assets/student-codetest.png) |
 
-### AI Değerlendirme Akışı
+### AI Evaluation Flow
 
 ```
-Sınav Kağıdı (PNG/PDF)
+Exam Paper (PNG/PDF)
         │
         ▼
 ┌───────────────────┐
-│  Gemini Vision    │  ← OCR:  El yazısı → Kod metni + Öğrenci adı + numarası tespiti
-│  (Ön İşleme ile)  │     
+│  Gemini Vision    │  ← OCR: Handwriting → Code text + Student name & number
+│  (Preprocessed)  │
 └────────┬──────────┘
          │
          ▼
 ┌─────────────────────────────────────┐
-│      Paralel Jüri Değerlendirme     │
+│        Parallel Jury Evaluation     │
 ├───────────┬──────────┬──────────────┤
 │  Gemini   │  Groq    │  DeepSeek    │
 │  2.5 Flash│  Llama   │  V3 (free)   │
@@ -153,184 +155,184 @@ Sınav Kağıdı (PNG/PDF)
                                │
                                ▼
                     ┌──────────────────┐
-                    │  Hakem / Judge   │  ← Groq Llama (JSON mode)
-                    │  Üç jüriyi       │    Çakışmaları çözer
-                    │  sentezler       │    Yapılandırılmış çıktı
+                    │  Judge Model     │  ← Groq Llama (JSON mode)
+                    │  Synthesizes     │    Resolves conflicts
+                    │  all 3 verdicts  │    Structured output
                     └────────┬─────────┘
                              │
                              ▼
-               NihaiKararRaporu (JSON)
-               ├── toplam_puan: 0-100
-               ├── syntax_hatalari[]
-               │   ├── satir, aciklama
-               │   └── hint (düzeltme ipucu)
-               ├── mantik_hatalari[]
-               │   ├── neden yanlış
-               │   └── doğru yaklaşım
-               ├── gelisim_alanlari[]
-               └── genel_degerlendirme
+               FinalDecisionReport (JSON)
+               ├── total_score: 0-100
+               ├── syntax_errors[]
+               │   ├── line, description
+               │   └── hint (fix suggestion)
+               ├── logic_errors[]
+               │   ├── why it's wrong
+               │   └── correct approach
+               ├── growth_areas[]
+               └── general_evaluation
 ```
 
 ---
 
-## API Referansı
+## API Reference
 
 ### Auth
 
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| `POST` | `/api/auth/login` | Giriş, JWT döner |
-| `PUT` | `/api/auth/change-password` | Şifre değiştir |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/login` | Login, returns JWT |
+| `PUT` | `/api/auth/change-password` | Change password |
 
 ### Admin `/api/admin` — `[Admin]`
 
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| `GET` | `/api/admin/dashboard` | Sistem istatistikleri |
-| `GET` | `/api/admin/users` | Kullanıcı listesi (arama, rol, sayfalama) |
-| `POST` | `/api/admin/users` | Yeni kullanıcı |
-| `PUT` | `/api/admin/users/{id}` | Kullanıcı güncelle |
-| `DELETE` | `/api/admin/users/{id}` | Kullanıcı sil |
-| `PATCH` | `/api/admin/users/{id}/status` | Aktif/pasif |
-| `GET` | `/api/admin/classes` | Sınıf listesi |
-| `POST` | `/api/admin/classes` | Sınıf oluştur |
-| `PUT` | `/api/admin/classes/{id}` | Sınıf güncelle |
-| `DELETE` | `/api/admin/classes/{id}` | Sınıf sil |
-| `GET` | `/api/admin/classes/{classId}/students` | Sınıf öğrencileri |
-| `POST` | `/api/admin/classes/{classId}/students` | Öğrenci ata |
-| `DELETE` | `/api/admin/classes/{classId}/students/{studentId}` | Öğrenciyi çıkar |
-| `GET` | `/api/admin/courses` | Ders listesi |
-| `POST` | `/api/admin/classes/courses` | Ders oluştur |
-| `PUT` | `/api/admin/courses/{id}` | Ders güncelle |
-| `DELETE` | `/api/admin/courses/{id}` | Ders sil |
-| `GET` | `/api/admin/announcements` | Duyurular |
-| `POST` | `/api/admin/announcements` | Duyuru oluştur |
-| `PUT` | `/api/admin/announcements/{id}` | Duyuru güncelle |
-| `DELETE` | `/api/admin/announcements/{id}` | Duyuru sil |
-| `GET` | `/api/admin/logs` | Sistem logları |
-| `GET` | `/api/admin/api-costs` | API kullanım maliyeti |
-| `GET` | `/api/admin/queue` | Kuyruk durumu |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/admin/dashboard` | System statistics |
+| `GET` | `/api/admin/users` | User list (search, role, pagination) |
+| `POST` | `/api/admin/users` | Create user |
+| `PUT` | `/api/admin/users/{id}` | Update user |
+| `DELETE` | `/api/admin/users/{id}` | Delete user |
+| `PATCH` | `/api/admin/users/{id}/status` | Toggle active/inactive |
+| `GET` | `/api/admin/classes` | Class list |
+| `POST` | `/api/admin/classes` | Create class |
+| `PUT` | `/api/admin/classes/{id}` | Update class |
+| `DELETE` | `/api/admin/classes/{id}` | Delete class |
+| `GET` | `/api/admin/classes/{classId}/students` | Class students |
+| `POST` | `/api/admin/classes/{classId}/students` | Assign students |
+| `DELETE` | `/api/admin/classes/{classId}/students/{studentId}` | Remove student |
+| `GET` | `/api/admin/courses` | Course list |
+| `POST` | `/api/admin/classes/courses` | Create course |
+| `PUT` | `/api/admin/courses/{id}` | Update course |
+| `DELETE` | `/api/admin/courses/{id}` | Delete course |
+| `GET` | `/api/admin/announcements` | Announcements |
+| `POST` | `/api/admin/announcements` | Create announcement |
+| `PUT` | `/api/admin/announcements/{id}` | Update announcement |
+| `DELETE` | `/api/admin/announcements/{id}` | Delete announcement |
+| `GET` | `/api/admin/logs` | System logs |
+| `GET` | `/api/admin/api-costs` | API usage costs |
+| `GET` | `/api/admin/queue` | Queue status |
 
 ### Teacher `/api/teacher` — `[Teacher]`
 
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| `GET` | `/api/teacher/stats` | Öğretmen istatistikleri |
-| `GET` | `/api/teacher/courses` | Dersler |
-| `GET` | `/api/teacher/classes` | Sınıflar |
-| `POST` | `/api/teacher/exams` | Sınav oluştur |
-| `POST` | `/api/teacher/exams/{examId}/papers` | Kağıt yükle |
-| `POST` | `/api/teacher/exams/{examId}/rubric` | Rubrik kaydet |
-| `POST` | `/api/teacher/exams/{examId}/start-evaluation` | AI değerlendirmeyi başlat |
-| `DELETE` | `/api/teacher/exams/{examId}` | Sınav sil |
-| `DELETE` | `/api/teacher/papers/{examPaperId}` | Kağıt sil |
-| `GET` | `/api/teacher/results` | Sonuç listesi (arama, filtre, sayfalama) |
-| `GET` | `/api/teacher/results/{id}` | Sonuç detayı |
-| `PUT` | `/api/teacher/results/{id}/override` | Not geçersiz kıl |
-| `PUT` | `/api/teacher/results/{id}/rubric-scores` | Rubrik puanı güncelle |
-| `PUT` | `/api/teacher/results/{id}/note` | Öğretmen notu ekle |
-| `PUT` | `/api/teacher/results/{id}/share` | Sonucu paylaş |
-| `PUT` | `/api/teacher/results/bulk-share` | Toplu paylaş |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/teacher/stats` | Teacher statistics |
+| `GET` | `/api/teacher/courses` | Courses |
+| `GET` | `/api/teacher/classes` | Classes |
+| `POST` | `/api/teacher/exams` | Create exam |
+| `POST` | `/api/teacher/exams/{examId}/papers` | Upload exam papers |
+| `POST` | `/api/teacher/exams/{examId}/rubric` | Save rubric |
+| `POST` | `/api/teacher/exams/{examId}/start-evaluation` | Start AI evaluation |
+| `DELETE` | `/api/teacher/exams/{examId}` | Delete exam |
+| `DELETE` | `/api/teacher/papers/{examPaperId}` | Delete paper |
+| `GET` | `/api/teacher/results` | Result list (search, filter, pagination) |
+| `GET` | `/api/teacher/results/{id}` | Result detail |
+| `PUT` | `/api/teacher/results/{id}/override` | Override score |
+| `PUT` | `/api/teacher/results/{id}/rubric-scores` | Update rubric scores |
+| `PUT` | `/api/teacher/results/{id}/note` | Add teacher note |
+| `PUT` | `/api/teacher/results/{id}/share` | Share result |
+| `PUT` | `/api/teacher/results/bulk-share` | Bulk share |
 | `GET` | `/api/teacher/results/export/excel` | CSV export |
 | `GET` | `/api/teacher/results/export/pdf` | PDF export |
-| `GET` | `/api/teacher/students` | Öğrenci listesi |
-| `GET` | `/api/teacher/students/{id}/stats` | Öğrenci istatistikleri |
-| `GET` | `/api/teacher/regrade-requests` | İtiraz talepleri |
-| `GET` | `/api/teacher/regrade-requests/count` | Bekleyen itiraz sayısı |
-| `POST` | `/api/teacher/regrade-requests/{requestId}/resolve` | İtirazı çöz |
-| `GET` | `/api/teacher/analytics/exams` | Sınav analitiği |
-| `GET` | `/api/teacher/analytics/top-errors` | En sık hatalar |
-| `GET` | `/api/teacher/queue-status` | Değerlendirme kuyruğu durumu |
+| `GET` | `/api/teacher/students` | Student list |
+| `GET` | `/api/teacher/students/{id}/stats` | Student statistics |
+| `GET` | `/api/teacher/regrade-requests` | Grade appeal requests |
+| `GET` | `/api/teacher/regrade-requests/count` | Pending appeal count |
+| `POST` | `/api/teacher/regrade-requests/{requestId}/resolve` | Resolve appeal |
+| `GET` | `/api/teacher/analytics/exams` | Exam analytics |
+| `GET` | `/api/teacher/analytics/top-errors` | Most frequent errors |
+| `GET` | `/api/teacher/queue-status` | Evaluation queue status |
 
 ### Student `/api/student` — `[Student]`
 
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| `GET` | `/api/student/stats` | Öğrenci istatistikleri |
-| `GET` | `/api/student/results` | Sonuç listesi |
-| `GET` | `/api/student/results/{id}` | Sonuç detayı |
-| `GET` | `/api/student/results/{id}/paper-image` | Sınav kağıdı görseli |
-| `POST` | `/api/student/results/{id}/regrade-request` | Not itirazı oluştur |
-| `GET` | `/api/student/results/{id}/regrade-request` | İtiraz durumu |
-| `GET` | `/api/student/weak-topics` | Zayıf konular analizi |
-| `GET` | `/api/student/insight` | Kişisel gelişim önerileri |
-| `GET` | `/api/student/analytics/progress` | İlerleme analitiği |
-| `GET` | `/api/student/analytics/error-summary` | Hata özeti |
-| `GET` | `/api/student/announcements` | Duyurular |
-| `POST` | `/api/student/convert-code` | El yazısı → Metin (OCR) |
-| `POST` | `/api/student/run-code` | Kod çalıştır |
-| `POST` | `/api/student/join-class` | Kod ile sınıfa katıl |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/student/stats` | Student statistics |
+| `GET` | `/api/student/results` | Result list |
+| `GET` | `/api/student/results/{id}` | Result detail |
+| `GET` | `/api/student/results/{id}/paper-image` | Exam paper image |
+| `POST` | `/api/student/results/{id}/regrade-request` | Submit grade appeal |
+| `GET` | `/api/student/results/{id}/regrade-request` | Appeal status |
+| `GET` | `/api/student/weak-topics` | Weak topic analysis |
+| `GET` | `/api/student/insight` | Personalized improvement suggestions |
+| `GET` | `/api/student/analytics/progress` | Progress analytics |
+| `GET` | `/api/student/analytics/error-summary` | Error summary |
+| `GET` | `/api/student/announcements` | Announcements |
+| `POST` | `/api/student/convert-code` | Handwriting → Text (OCR) |
+| `POST` | `/api/student/run-code` | Run code |
+| `POST` | `/api/student/join-class` | Join class with code |
 
 ### Messages `/api/messages` — `[Authenticated]`
 
-| Method | Endpoint | Açıklama |
-|--------|----------|----------|
-| `GET` | `/api/messages/teachers` | Öğretmen listesi |
-| `GET` | `/api/messages/students` | Öğrenci listesi |
-| `GET` | `/api/messages/{userId}` | Konuşma geçmişi |
-| `POST` | `/api/messages` | Mesaj gönder |
-| `PUT` | `/api/messages/{messageId}/read` | Okundu işaretle |
-| `GET` | `/api/messages/unread-count` | Okunmamış sayısı |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/messages/teachers` | Teacher list |
+| `GET` | `/api/messages/students` | Student list |
+| `GET` | `/api/messages/{userId}` | Conversation history |
+| `POST` | `/api/messages` | Send message |
+| `PUT` | `/api/messages/{messageId}/read` | Mark as read |
+| `GET` | `/api/messages/unread-count` | Unread count |
 
 ### SignalR Hubs
 
-| Hub | Endpoint | Roller | Açıklama |
-|-----|----------|--------|----------|
-| `ChatHub` | `/hubs/chat` | Authenticated | Gerçek zamanlı mesajlaşma |
-| `LogHub` | `/hubs/logs` | Admin | Canlı sistem log akışı |
+| Hub | Endpoint | Roles | Description |
+|-----|----------|-------|-------------|
+| `ChatHub` | `/hubs/chat` | Authenticated | Real-time messaging |
+| `LogHub` | `/hubs/logs` | Admin | Live system log streaming |
 
-> JWT token WebSocket auth için `?access_token=<token>` query parametresi olarak gönderilir.
+> JWT token is passed as `?access_token=<token>` query parameter for WebSocket authentication.
 
 ---
 
-## Teknoloji Yığını
+## Tech Stack
 
 ### Backend
 
-| Katman | Teknoloji |
-|--------|-----------|
+| Layer | Technology |
+|-------|------------|
 | Framework | ASP.NET Core 10.0 |
 | ORM | Entity Framework Core 10 + Npgsql |
-| Veritabanı | PostgreSQL 16 |
-| Mesaj Kuyruğu | RabbitMQ + MassTransit 8.3 |
-| Kimlik Doğrulama | JWT Bearer |
-| Gerçek Zamanlı | ASP.NET Core SignalR |
-| Loglama | Serilog → PostgreSQL + Console |
-| Validasyon | FluentValidation |
-| PDF İşleme | PDFtoImage, QuestPDF |
-| Şifreleme | BCrypt.Net |
-| API Dökümantasyonu | Swagger / OpenAPI |
+| Database | PostgreSQL 16 |
+| Message Queue | RabbitMQ + MassTransit 8.3 |
+| Authentication | JWT Bearer |
+| Real-time | ASP.NET Core SignalR |
+| Logging | Serilog → PostgreSQL + Console |
+| Validation | FluentValidation |
+| PDF Processing | PDFtoImage, QuestPDF |
+| Password Hashing | BCrypt.Net |
+| API Docs | Swagger / OpenAPI |
 
 ### Frontend
 
-| Kategori | Teknoloji |
-|----------|-----------|
+| Category | Technology |
+|----------|------------|
 | Framework | React 19 + TypeScript |
 | Build | Vite 8 |
-| UI Kütüphanesi | Ant Design 6 |
+| UI Library | Ant Design 6 |
 | State | Zustand |
 | Server State | TanStack Query |
 | HTTP | Axios |
-| Grafikler | Recharts |
-| Gerçek Zamanlı | @microsoft/signalr |
-| Test | Playwright |
+| Charts | Recharts |
+| Real-time | @microsoft/signalr |
+| Testing | Playwright |
 
 ### Python Worker
 
-| Kategori | Teknoloji |
-|----------|-----------|
+| Category | Technology |
+|----------|------------|
 | OCR | Gemini 2.5 Flash Vision |
-| Ensemble | Gemini 2.5 Flash + Groq Llama 3.3 70B + DeepSeek V3 |       
-| Hakem | Groq Llama 3.3 70B (JSON mode) |
-| Görsel Fallback | Groq Llama 4 Scout Vision |
-| Görüntü İşleme | Pillow (grayscale, kontrast, keskinleştirme) |
-| Mesaj Kuyruğu | pika (RabbitMQ) |
-| Veri Doğrulama | Pydantic |
-| Web Sunucusu | Flask |
+| Ensemble | Gemini 2.5 Flash + Groq Llama 3.3 70B + DeepSeek V3 |
+| Judge | Groq Llama 3.3 70B (JSON mode) |
+| Vision Fallback | Groq Llama 4 Scout Vision |
+| Image Processing | Pillow (grayscale, contrast, sharpening) |
+| Message Queue | pika (RabbitMQ) |
+| Data Validation | Pydantic |
+| Web Server | Flask |
 
 ---
 
-## Domain Modeli
+## Domain Model
 
 ```
 User (Student / Teacher / Admin)
@@ -350,23 +352,23 @@ User (Student / Teacher / Admin)
  ├── Message[] (Student ↔ Teacher)
  ├── RegradeRequest[]
  └── StudentInsight
-      ├── InsightText (AI üretimi)
-      └── IsInsightDirty (yeniden üretilmeli mi)
+      ├── InsightText (AI generated)
+      └── IsInsightDirty (needs regeneration)
 ```
 
-**Enum'lar:**
+**Enums:**
 
-| Enum | Değerler |
-|------|---------|
+| Enum | Values |
+|------|--------|
 | `UserRole` | `Student`, `Teacher`, `Admin` |
 | `EvaluationStatus` | `Pending`, `Extracting`, `Evaluating`, `Completed`, `Failed` |
 | `RegradeStatus` | `Pending`, `Approved`, `Rejected` |
 
 ---
 
-## Kurulum
+## Setup
 
-### Gereksinimler
+### Requirements
 
 - .NET 10 SDK
 - Node.js 20+
@@ -374,7 +376,7 @@ User (Student / Teacher / Admin)
 - PostgreSQL 16
 - RabbitMQ 3.x
 
-### 1. Veritabanı
+### 1. Database
 
 ```sql
 CREATE DATABASE AsisDb;
@@ -407,18 +409,16 @@ npm run dev
 ```bash
 cd CodexIQ.Worker
 pip install -r requirements.txt
-
-# .env dosyası oluştur
 cp .env.example .env
-# GOOGLE_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY değerlerini gir
+# Fill in GOOGLE_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY
 ```
 
 ```bash
-python worker.py           # Sınav değerlendirme worker'ı
-python insight_worker.py   # Öğrenci insight worker'ı
+python worker.py           # Exam evaluation worker
+python insight_worker.py   # Student insight worker
 ```
 
-### Environment Değişkenleri
+### Environment Variables
 
 `CodexIQ.Worker/.env`:
 ```env
@@ -450,10 +450,10 @@ FILE_STORAGE_BASE=C:\CodexIQ\Uploads
 
 ---
 
-## Mesaj Kuyruğu Akışı
+## Message Queue Flow
 
 ```
-.NET (Teacher tetikler)
+.NET (Teacher triggers)
         │
         │  EvaluateExamCommand
         ▼
@@ -461,8 +461,8 @@ FILE_STORAGE_BASE=C:\CodexIQ\Uploads
 │  evaluate-exam-queue  │
 └───────────┬───────────┘
             │
-            ▼ (worker.py dinler)
-        [OCR + 3 Jüri + Hakem]
+            ▼ (worker.py listens)
+        [OCR + 3 Juries + Judge]
             │
             │  ExamResultPublished (JSON)
             ▼
@@ -470,8 +470,8 @@ FILE_STORAGE_BASE=C:\CodexIQ\Uploads
 │  exam-results-queue   │
 └───────────┬───────────┘
             │
-            ▼ (ExamResultConsumer dinler)
-        [DB'ye kaydet + StudentId eşleştir]
+            ▼ (ExamResultConsumer listens)
+        [Save to DB + match StudentId]
             │
             │  GenerateInsightCommand
             ▼
@@ -479,8 +479,8 @@ FILE_STORAGE_BASE=C:\CodexIQ\Uploads
 │  generate-insight-queue  │
 └───────────┬──────────────┘
             │
-            ▼ (insight_worker.py dinler)
-        [Groq → Kişisel Öneriler]
+            ▼ (insight_worker.py listens)
+        [Groq → Personalized Suggestions]
             │
             │  InsightResultPublished
             ▼
@@ -488,17 +488,17 @@ FILE_STORAGE_BASE=C:\CodexIQ\Uploads
 │   insight-result-queue   │
 └───────────┬──────────────┘
             │
-            ▼ (InsightResultConsumer dinler)
-        [StudentInsight DB'ye kaydet]
+            ▼ (InsightResultConsumer listens)
+        [Save StudentInsight to DB]
 ```
 
 ---
 
-## Proje Yapısı
+## Project Structure
 
 ```
 CodexIQ.Api/
-├── CodexIQ.Api/                    # Web API katmanı
+├── CodexIQ.Api/                    # Web API layer
 │   ├── Controllers/
 │   │   ├── AuthController.cs
 │   │   ├── AdminController.cs
@@ -508,15 +508,15 @@ CodexIQ.Api/
 │   ├── Middlewares/
 │   │   └── ExceptionHandlingMiddleware.cs
 │   └── Program.cs
-├── CodexIQ.Application/            # İş mantığı katmanı
+├── CodexIQ.Application/            # Business logic layer
 │   ├── DTOs/
 │   ├── Interfaces/
 │   ├── Services/
 │   └── Validators/
-├── CodexIQ.Domain/                 # Domain katmanı
+├── CodexIQ.Domain/                 # Domain layer
 │   ├── Entities/
 │   └── Enums/
-├── CodexIQ.Infrastructure/         # Altyapı katmanı
+├── CodexIQ.Infrastructure/         # Infrastructure layer
 │   ├── Messaging/                  # MassTransit consumers
 │   ├── Persistence/                # DbContext, migrations
 │   ├── RealTime/                   # SignalR hubs
@@ -524,52 +524,52 @@ CodexIQ.Api/
 ├── CodexIQ.Frontend/               # React frontend
 │   └── exam-grader/
 │       ├── src/
-│       │   ├── api/               # Axios API çağrıları
-│       │   ├── pages/             # Admin, Teacher, Student sayfaları
-│       │   ├── components/        # Ortak bileşenler
+│       │   ├── api/               # Axios API calls
+│       │   ├── pages/             # Admin, Teacher, Student pages
+│       │   ├── components/        # Shared components
 │       │   ├── hooks/             # useT(), useThemeColors()
-│       │   ├── i18n/              # TR/EN çeviriler
+│       │   ├── i18n/              # TR/EN translations
 │       │   └── store/             # Zustand store
-│       └── e2e/                   # Playwright testleri
+│       └── e2e/                   # Playwright tests
 └── CodexIQ.Worker/                 # Python AI worker
-    ├── worker.py                   # Sınav değerlendirme
-    ├── insight_worker.py           # Gelişim önerileri
+    ├── worker.py                   # Exam evaluation
+    ├── insight_worker.py           # Growth suggestions
     └── requirements.txt
 ```
 
 ---
 
-## Güvenlik
+## Security
 
-- **JWT Bearer** kimlik doğrulama — tüm korumalı endpoint'lerde zorunlu
-- **Rol tabanlı yetkilendirme** — `[Admin]`, `[Teacher]`, `[Student]` ayrımı
-- **BCrypt** şifre hash'leme
-- **FluentValidation** ile giriş doğrulama
-- **ExceptionHandlingMiddleware** — stack trace'i client'a sızdırmaz
-- Hassas konfigürasyon `appsettings.Development.json` ve `.env` içinde — Git'e eklenmez
+- **JWT Bearer** authentication — required on all protected endpoints
+- **Role-based authorization** — `[Admin]`, `[Teacher]`, `[Student]` separation
+- **BCrypt** password hashing
+- **FluentValidation** input validation
+- **ExceptionHandlingMiddleware** — never leaks stack traces to client
+- Sensitive config in `appsettings.Development.json` and `.env` — excluded from Git
 
 ---
 
-## Test
+## Testing
 
 ```bash
 cd CodexIQ.Frontend/exam-grader
 
-npm test                              # Tüm testler
-npm run test:auth                     # Auth testleri
-npm run test:teacher-ui               # Öğretmen UI testleri
-npm run test:student-ui               # Öğrenci UI testleri
-npm run test:admin-ui                 # Admin UI testleri
-npm run test:backend                  # Backend API testleri
-npx playwright show-report            # Test raporunu görüntüle
+npm test                              # All tests
+npm run test:auth                     # Auth tests
+npm run test:teacher-ui               # Teacher UI tests
+npm run test:student-ui               # Student UI tests
+npm run test:admin-ui                 # Admin UI tests
+npm run test:backend                  # Backend API tests
+npx playwright show-report            # View HTML report
 ```
 
-> Testler **msedge** kanalını kullanır, seri olarak (workers=1) çalışır.
+> Tests use the **msedge** channel and run serially (workers=1).
 
 ---
 
 <div align="center">
 
-**CodexIQ** — Yapay Zeka ile Sınav Değerlendirmesini Yeniden Tanımlıyoruz
+**CodexIQ** — Redefining Exam Grading with Artificial Intelligence
 
 </div>
