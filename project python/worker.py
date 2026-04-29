@@ -1,14 +1,20 @@
 """
 CodexIQ Python Worker
 =====================
-OCR (Gemini Vision) + Ensemble Değerlendirme (Gemini + Groq + Ollama) + RabbitMQ
+OCR (Gemini Vision) + Ensemble (Gemini + Groq + OpenRouter DeepSeek) + RabbitMQ
+
+Modeller (tamamı ücretsiz):
+- OCR + Jüri 1: Gemini 2.0 Flash (Google AI Studio)
+- Jüri 2:       Groq Llama 3.3 70B
+- Jüri 3:       OpenRouter DeepSeek V3 (free tier)
+- Hakem:        Groq Llama 3.3 70B (JSON mode) + Gemini fallback
 
 Akış:
 1. evaluate-exam-queue'dan mesaj alır
 2. Görselden öğrenci bilgisi çıkarır (sağ üst köşe)
 3. Görselden el yazısı kodu okur
 4. 3 model ile paralel değerlendirme yapar
-5. Hakem (Gemini) nihai kararı verir
+5. Hakem nihai kararı verir
 6. Sonucu exam-results-queue'ya gönderir
 """
 
@@ -16,11 +22,14 @@ import asyncio
 import io
 import json
 import os
+import re
 import sys
 import time
 import threading
 import pika
-from PIL import Image, ImageFile
+from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+from PIL import Image, ImageFile, ImageEnhance, ImageFilter
 
 # Truncated JPEG/PNG dosyalarını da oku (son birkaç byte eksik olsa bile)
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -30,12 +39,23 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from typing import Optional
 
+# .env dosyasını yükle (API keyleri burada)
+load_dotenv()
+
 # ============================================================
 # KONFIGÜRASYON
 # ============================================================
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyApvPYnZsUeTpStZNHCRUXmweamDsrKJkY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "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")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+if not GOOGLE_API_KEY:
+    raise EnvironmentError("GOOGLE_API_KEY ortam değişkeni bulunamadı! .env dosyasını kontrol et.")
+if not GROQ_API_KEY:
+    raise EnvironmentError("GROQ_API_KEY ortam değişkeni bulunamadı! .env dosyasını kontrol et.")
+if not OPENROUTER_API_KEY:
+    raise EnvironmentError("OPENROUTER_API_KEY ortam değişkeni bulunamadı! openrouter.ai'dan ücretsiz key alıp .env'e ekle.")
 
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
@@ -44,7 +64,8 @@ RABBITMQ_PASS = os.getenv("RABBITMQ_PASS", "guest")
 # .NET'in dosyaları kaydettiği base path
 FILE_STORAGE_BASE = os.getenv("FILE_STORAGE_BASE", "C:\\CodexIQ\\Uploads")
 
-LISTEN_QUEUE = "evaluate-exam-queue"
+LISTEN_QUEUE = "e" \
+"valuate-exam-queue"
 RESULT_QUEUE = "exam-results-queue"
 
 # ============================================================
@@ -80,11 +101,48 @@ class OgrenciBilgisi(BaseModel):
 # OCR - GÖRSEL OKUMA
 # ============================================================
 
+def _parse_retry_delay(error: Exception) -> float:
+    """Gemini 429 hatasından retryDelay süresini saniye cinsinden çıkarır."""
+    text = str(error)
+    # "retryDelay": "14s" veya "Please retry in 14.3s"
+    match = re.search(r'[Rr]etry[Dd]elay["\s:]+(\d+(?:\.\d+)?)\s*s', text)
+    if match:
+        return float(match.group(1)) + 1.0
+    match = re.search(r'[Rr]etry in (\d+(?:\.\d+)?)\s*s', text)
+    if match:
+        return float(match.group(1)) + 1.0
+    return 15.0  # bulunamazsa varsayılan
+
+
+def _preprocess_image(image_bytes: bytes) -> bytes:
+    """
+    PIL ile görüntü ön işleme:
+    - Gri tonlamaya çevir (renk gürültüsünü azaltır)
+    - Kontrast artır (soluk el yazısını belirginleştirir)
+    - Keskinleştir (bulanık harfleri netleştirir)
+    """
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+    # Gri tonlama → kontrast artırma → keskinleştirme → RGB'ye geri dön
+    gray = img.convert("L")
+    enhanced = ImageEnhance.Contrast(gray).enhance(2.0)
+    sharpened = enhanced.filter(ImageFilter.SHARPEN)
+    final = sharpened.convert("RGB")
+
+    buf = io.BytesIO()
+    final.save(buf, format="PNG")
+    return buf.getvalue()
+
+
 class OCRReader:
-    """Gemini Vision ile görsel okuma"""
+    """Gemini Vision (+ Groq Vision fallback) ile görsel okuma"""
 
     def __init__(self):
-        self.client = genai.Client(api_key=GOOGLE_API_KEY)
+        self.gemini_client = genai.Client(api_key=GOOGLE_API_KEY)
+        self.groq_client = AsyncOpenAI(
+            api_key=GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1"
+        )
 
     async def extract_student_info(self, image_bytes: bytes) -> dict:
         """Görselin sağ üst köşesinden öğrenci bilgisini çıkarır"""
@@ -94,70 +152,170 @@ class OCRReader:
         Look at the TOP-RIGHT corner of this handwritten exam paper image.
         Students write their name, surname, and student number there.
 
+        Common ambiguous characters to watch for: 0 vs O, 1 vs l vs I, 5 vs S.
+        Student numbers are typically 10 digits long.
+
         Extract this information and return ONLY a JSON object:
         {
             "first_name": "student's first name",
             "last_name": "student's last name",
-            "student_number": "student number/ID"
+            "student_number": "student number/ID (digits only)"
         }
 
         If you cannot find any of these, use empty string "".
         Return ONLY the JSON, no other text.
         """
 
-        try:
-            image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+        # Ham ve ön işlenmiş görüntüleri dene
+        raw_part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+        processed_bytes = _preprocess_image(image_bytes)
+        proc_part = types.Part.from_bytes(data=processed_bytes, mime_type="image/png")
 
-            def _run():
-                return self.client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=[image_part, prompt]
-                ).text
+        for attempt in range(1, 4):
+            image_part = raw_part if attempt == 1 else proc_part
+            try:
+                def _run(part=image_part):
+                    return self.gemini_client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=[part, prompt]
+                    ).text
 
-            result = await asyncio.to_thread(_run)
-            result = result.replace("```json", "").replace("```", "").strip()
-            parsed = json.loads(result)
-            print(f"  [OCR] Öğrenci: {parsed.get('first_name', '')} {parsed.get('last_name', '')} - No: {parsed.get('student_number', '')}")
-            return parsed
-        except Exception as e:
-            print(f"  [OCR] Öğrenci bilgisi okunamadı: {e}")
-            return {"first_name": "", "last_name": "", "student_number": ""}
+                result = await asyncio.to_thread(_run)
+                result = result.replace("```json", "").replace("```", "").strip()
+                parsed = json.loads(result)
+                print(f"  [OCR] Öğrenci: {parsed.get('first_name', '')} {parsed.get('last_name', '')} - No: {parsed.get('student_number', '')}")
+                return parsed
+            except Exception as e:
+                err_str = str(e)
+                is_quota = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
+                if attempt < 3:
+                    wait = _parse_retry_delay(e) if is_quota else attempt * 5
+                    print(f"  [OCR] Öğrenci bilgisi deneme {attempt} başarısız ({'kota' if is_quota else 'hata'}), {wait:.0f}s bekleniyor...")
+                    await asyncio.sleep(wait)
+                else:
+                    # Groq Vision fallback
+                    print(f"  [OCR] Gemini başarısız, Groq Vision fallback deneniyor...")
+                    try:
+                        result = await self._groq_extract_student_info(processed_bytes, prompt)
+                        return result
+                    except Exception as groq_err:
+                        print(f"  [OCR] Öğrenci bilgisi okunamadı (Groq da başarısız): {groq_err}")
+                        return {"first_name": "", "last_name": "", "student_number": ""}
 
-    async def extract_code(self, image_bytes: bytes) -> str:
-        """Görseldeki el yazısı kodu okur"""
+    async def _groq_extract_student_info(self, image_bytes: bytes, prompt: str) -> dict:
+        import base64
+        b64 = base64.b64encode(image_bytes).decode("utf-8")
+        response = await self.groq_client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                    {"type": "text", "text": prompt}
+                ]
+            }],
+            max_tokens=200,
+            temperature=0.1
+        )
+        text = response.choices[0].message.content or ""
+        text = text.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(text)
+        print(f"  [OCR/Groq] Öğrenci: {parsed.get('first_name', '')} {parsed.get('last_name', '')} - No: {parsed.get('student_number', '')}")
+        return parsed
+
+    async def extract_code(self, image_bytes: bytes, language: str = "unknown") -> str:
+        """Görseldeki el yazısı kodu okur — ön işleme + dile özgü prompt + Groq fallback"""
         print("  [OCR] El yazısı kod okunuyor...")
 
-        prompt = """
+        lang_hint = {
+            "python": "Python code. Pay close attention to indentation (spaces/tabs define blocks). Watch for: ':' at end of if/for/def/while lines, '==' vs '=', '**' for power.",
+            "java": "Java code. Watch for: '{' and '}' block delimiters, ';' at end of statements, type declarations.",
+            "c": "C code. Watch for: '{' and '}', ';' at end of statements, '*' for pointers, '->' operator.",
+            "cpp": "C++ code. Watch for: '{' and '}', ';', '<<' and '>>' operators, '::' scope resolution.",
+            "javascript": "JavaScript code. Watch for: '{' and '}', '=>' arrow functions, '===' vs '=='.",
+        }.get(language.lower(), f"{language} code.")
+
+        prompt = f"""
         You are a strict, high-precision data transcription engine.
-        Your task is to transcribe handwritten programming code from an image exactly as it appears, with no alterations.
+        Your task is to transcribe handwritten programming code from an image exactly as it appears.
 
-        # Critical Constraints
-        * ZERO AUTOCORRECT: Do not correct any spelling, syntax, or logical errors. Transcribe typos exactly as written.
-        * PRESERVE INDENTATION: Perfectly replicate the spatial arrangement, including all leading spaces and line breaks.
-        * NO INFERENCE: Do not add missing punctuation that are not clearly visible.
-        * IGNORE the student info area (top-right corner with name/number). Only transcribe the CODE portion.
+        ## Language Context
+        This is {lang_hint}
 
-        # Output Format
-        Output ONLY the raw transcribed code text. No markdown code blocks, no explanations.
+        ## Ambiguous Character Guide
+        When a character is unclear, use context to decide:
+        - 0 (zero) vs O (letter O): digits in numbers → 0, variable names → O
+        - 1 (one) vs l (lowercase L) vs I (uppercase i): numbers → 1, identifiers → l or I
+        - 5 vs S: numbers → 5, identifiers → S
+
+        ## Critical Rules
+        * ZERO AUTOCORRECT: Transcribe typos exactly as written. Do NOT fix errors.
+        * PRESERVE INDENTATION: Replicate all leading spaces and line breaks faithfully.
+        * NO INFERENCE: Do not add brackets, colons, or punctuation not clearly visible.
+        * IGNORE the student info area (top-right corner with name/number).
+
+        ## Output Format
+        Output ONLY the raw transcribed code. No markdown, no explanations.
         """
 
-        try:
-            image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+        processed_bytes = _preprocess_image(image_bytes)
+        raw_part  = types.Part.from_bytes(data=image_bytes,       mime_type="image/png")
+        proc_part = types.Part.from_bytes(data=processed_bytes,   mime_type="image/png")
 
-            def _run():
-                return self.client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=[image_part, prompt]
-                ).text
+        for attempt in range(1, 4):
+            # İlk denemede ham görüntü, sonrasında ön işlenmiş
+            image_part = raw_part if attempt == 1 else proc_part
+            try:
+                def _run(part=image_part):
+                    return self.gemini_client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=[part, prompt]
+                    ).text
 
-            result = await asyncio.to_thread(_run)
-            result = result.replace("```python", "").replace("```c", "").replace("```cpp", "")
-            result = result.replace("```java", "").replace("```javascript", "").replace("```", "").strip()
-            print(f"  [OCR] Kod okundu ({len(result)} karakter)")
-            return result
-        except Exception as e:
-            print(f"  [OCR] Kod okunamadı: {e}")
-            return ""
+                result = await asyncio.to_thread(_run)
+                for lang_tag in ["```python", "```java", "```c", "```cpp", "```javascript", "```"]:
+                    result = result.replace(lang_tag, "")
+                result = result.strip()
+                print(f"  [OCR] Kod okundu ({len(result)} karakter)")
+                return result
+            except Exception as e:
+                err_str = str(e)
+                is_quota = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
+                if attempt < 3:
+                    wait = _parse_retry_delay(e) if is_quota else attempt * 5
+                    print(f"  [OCR] Kod okuma deneme {attempt} başarısız ({'kota' if is_quota else 'hata'}), {wait:.0f}s bekleniyor...")
+                    await asyncio.sleep(wait)
+                else:
+                    # Groq Vision fallback
+                    print(f"  [OCR] Gemini başarısız, Groq Vision fallback deneniyor...")
+                    try:
+                        result = await self._groq_extract_code(processed_bytes, prompt)
+                        return result
+                    except Exception as groq_err:
+                        print(f"  [OCR] Kod okunamadı (Groq da başarısız): {groq_err}")
+                        return ""
+
+    async def _groq_extract_code(self, image_bytes: bytes, prompt: str) -> str:
+        import base64
+        b64 = base64.b64encode(image_bytes).decode("utf-8")
+        response = await self.groq_client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                    {"type": "text", "text": prompt}
+                ]
+            }],
+            max_tokens=1500,
+            temperature=0.1
+        )
+        text = response.choices[0].message.content or ""
+        for lang_tag in ["```python", "```java", "```c", "```cpp", "```javascript", "```"]:
+            text = text.replace(lang_tag, "")
+        text = text.strip()
+        print(f"  [OCR/Groq] Kod okundu ({len(text)} karakter)")
+        return text
 
 # ============================================================
 # ENSEMBLE DEĞERLENDİRME
@@ -171,6 +329,10 @@ class EnsembleEvaluator:
         self.groq_client = AsyncOpenAI(
             api_key=GROQ_API_KEY,
             base_url="https://api.groq.com/openai/v1"
+        )
+        self.openrouter_client = AsyncOpenAI(
+            api_key=OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1"
         )
 
     def _build_eval_prompt(self, student_code: str, teacher_context: str, language: str) -> str:
@@ -199,19 +361,24 @@ class EnsembleEvaluator:
         """
 
     async def _jury_gemini(self, prompt: str) -> tuple[str, int]:
-        """Gemini jüri değerlendirmesi"""
+        """Gemini jüri değerlendirmesi — 2 deneme"""
         print("  [Jüri 1] Gemini analiz ediyor...")
-        try:
-            def _run():
-                return self.gemini_client.models.generate_content(
-                    model='gemini-2.5-flash', contents=prompt
-                ).text
-            rapor = await asyncio.to_thread(_run)
-            score = self._extract_score(rapor)
-            return rapor, score
-        except Exception as e:
-            print(f"  [Jüri 1] Gemini hatası: {e}")
-            return f"Gemini bağlantı hatası: {e}", 0
+        last_err = None
+        for attempt in range(1, 3):
+            try:
+                def _run():
+                    return self.gemini_client.models.generate_content(
+                        model='gemini-2.5-flash', contents=prompt
+                    ).text
+                rapor = await asyncio.to_thread(_run)
+                score = self._extract_score(rapor)
+                return rapor, score
+            except Exception as e:
+                last_err = e
+                if attempt < 2:
+                    await asyncio.sleep(3)
+        print(f"  [Jüri 1] Gemini hatası: {last_err}")
+        return f"Gemini bağlantı hatası: {last_err}", 0
 
     async def _jury_groq(self, prompt: str) -> tuple[str, int]:
         """Groq (Llama) jüri değerlendirmesi"""
@@ -229,19 +396,30 @@ class EnsembleEvaluator:
             print(f"  [Jüri 2] Groq hatası: {e}")
             return f"Groq bağlantı hatası: {e}", 0
 
-    async def _jury_ollama(self, prompt: str) -> tuple[str, int]:
-        """Ollama (Llama local) jüri değerlendirmesi"""
-        print("  [Jüri 3] Ollama (Llama) analiz ediyor...")
-        try:
-            import ollama
-            client = ollama.AsyncClient()
-            response = await client.generate(model='llama3.1', prompt=prompt)
-            rapor = response['response']
-            score = self._extract_score(rapor)
-            return rapor, score
-        except Exception as e:
-            print(f"  [Jüri 3] Ollama hatası: {e}")
-            return f"Ollama bağlantı hatası: {e}", 0
+    async def _jury_deepseek(self, prompt: str) -> tuple[str, int]:
+        """OpenRouter DeepSeek V3 (free) jüri değerlendirmesi"""
+        print("  [Jüri 3] OpenRouter DeepSeek V3 analiz ediyor...")
+        last_err = None
+        for attempt in range(1, 3):
+            try:
+                response = await self.openrouter_client.chat.completions.create(
+                    model="deepseek/deepseek-chat-v3-0324:free",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.2,
+                    extra_headers={
+                        "HTTP-Referer": "https://codexiq.local",
+                        "X-Title": "CodexIQ"
+                    }
+                )
+                rapor = response.choices[0].message.content or ""
+                score = self._extract_score(rapor)
+                return rapor, score
+            except Exception as e:
+                last_err = e
+                if attempt < 2:
+                    await asyncio.sleep(3)
+        print(f"  [Jüri 3] DeepSeek hatası: {last_err}")
+        return f"DeepSeek bağlantı hatası: {last_err}", 0
 
     def _extract_score(self, text: str) -> int:
         """Rapor metninden skoru çıkarmaya çalışır — önce FINAL_SCORE formatını arar"""
@@ -288,29 +466,29 @@ class EnsembleEvaluator:
         return 0
 
     async def _judge_evaluate(self, reports: str, teacher_context: str, student_code: str, language: str) -> str:
-        """Hakem nihai kararı"""
+        """Hakem nihai kararı — 3 deneme, sonra Groq fallback"""
         print("  [HAKEM] Nihai karar veriliyor...")
 
         hakem_prompt = f"""
         You are the Master Judge (Chief Professor) in a computer science evaluation panel.
         Three different AI teaching assistants have evaluated a student's handwritten {language} code.
-        
+
         ## Context & Rubric:
         {teacher_context}
-        
+
         ## Student's Raw OCR Code:
         {student_code}
-        
+
         ## Assistant Reports:
         {reports}
-        
+
         ## Instructions:
         1. Synthesize the three reports. Resolve any conflicts in scoring.
         2. Apply "OCR and Handwriting Tolerance" - overrule any assistant that unfairly penalized for OCR artifacts.
         3. For EVERY error you confirm, provide:
            - satir: line number or location
            - hata_turu: "syntax" or "logic"
-           - severity: "error" or "warning"  
+           - severity: "error" or "warning"
            - aciklama: clear description
            - hint: helpful, encouraging hint for the student to fix it
         4. Identify 3-5 areas where the student should improve (gelisim_alanlari). For each:
@@ -322,6 +500,28 @@ class EnsembleEvaluator:
         7. Output your final evaluation strictly matching the requested JSON schema.
         """
 
+        # PRIMARY: Groq (JSON mode) — hızlı ve stabil
+        groq_hakem_prompt = hakem_prompt + "\n\nIMPORTANT: Your response MUST be valid JSON matching this schema exactly:\n" + json.dumps(NihaiKararRaporu.model_json_schema(), ensure_ascii=False)
+        for attempt in range(1, 3):
+            try:
+                response = await self.groq_client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "system", "content": "You are a strict JSON-only responder. Output only valid JSON, no other text."},
+                        {"role": "user", "content": groq_hakem_prompt}
+                    ],
+                    temperature=0.1,
+                    response_format={"type": "json_object"}
+                )
+                print(f"  [HAKEM] Groq başarılı")
+                return response.choices[0].message.content
+            except Exception as groq_err:
+                print(f"  [HAKEM] Groq deneme {attempt} başarısız: {groq_err}")
+                if attempt < 2:
+                    await asyncio.sleep(3)
+
+        # FALLBACK: Gemini structured output
+        print(f"  [HAKEM] Groq başarısız, Gemini fallback devreye alınıyor...")
         try:
             def _run():
                 return self.gemini_client.models.generate_content(
@@ -334,15 +534,15 @@ class EnsembleEvaluator:
                     )
                 )
             response = await asyncio.to_thread(_run)
+            print(f"  [HAKEM] Gemini fallback başarılı")
             return response.text
-        except Exception as e:
-            print(f"  [HAKEM] Hata: {e}")
-            # Fallback: Kullanıcı dostu bir hata mesajı ile JSON döndür
+        except Exception as gem_err:
+            print(f"  [HAKEM] Gemini fallback da başarısız: {gem_err}")
             return json.dumps({
                 "toplam_puan": 0,
                 "syntax_hatalari": [],
                 "mantik_hatalari": [],
-                "hakem_ozeti": "Değerlendirme sırasında bir sistem hatası oluştu. Lütfen daha sonra tekrar deneyin veya bir yönetici ile iletişime geçin.",
+                "hakem_ozeti": f"Tüm hakem modelleri geçici olarak kullanılamıyor. Lütfen tekrar deneyin.",
                 "gelisim_alanlari": [],
                 "genel_degerlendirme": "Değerlendirme tamamlanamadı."
             })
@@ -355,7 +555,7 @@ class EnsembleEvaluator:
         results = await asyncio.gather(
             self._jury_gemini(prompt),
             self._jury_groq(prompt),
-            self._jury_ollama(prompt),
+            self._jury_deepseek(prompt),
             return_exceptions=True
         )
 
@@ -388,6 +588,18 @@ class EnsembleEvaluator:
                 "gelisim_alanlari": [],
                 "genel_degerlendirme": "Değerlendirme tamamlanamadı."
             }
+
+        # Hakem 0 verdiyse ama en az 1 jüri başarılıysa → başarılı jürilerin ortalamasını kullan
+        if judge_result.get("toplam_puan", 0) == 0:
+            successful_scores = [s for s in model_scores.values() if s > 0]
+            if successful_scores:
+                fallback_score = round(sum(successful_scores) / len(successful_scores))
+                print(f"  [HAKEM] Hakem skoru 0 — jüri ortalaması kullanılıyor: {fallback_score}/100 ({successful_scores})")
+                judge_result["toplam_puan"] = fallback_score
+                judge_result["hakem_ozeti"] = (
+                    f"(Hakem modeli geçici olarak kullanılamadı. Aktif jüri ortalaması: {fallback_score}/100) "
+                    + judge_result.get("hakem_ozeti", "")
+                )
 
         return {
             "evaluation": judge_result,
@@ -487,7 +699,7 @@ class CodexIQWorker:
             return
 
         try:
-            # PIL ile aç (LOAD_TRUNCATED_IMAGES=True sayesinde truncated JPEG'i tolere eder)
+            # PIL ile aç (LOAD_TRUNCATED_IMAGES=True sayesinde truncated JPEG tolere edilir)
             pil_image = Image.open(full_path)
             pil_image.load()  # Tüm piksel verisini belleğe oku
             # PNG olarak BytesIO'ya yaz: artık eksiksiz, bellekte, dosya bağlantısı yok
@@ -501,11 +713,11 @@ class CodexIQWorker:
             return
 
         # 2. OCR — Öğrenci bilgisi + Kod okuma (paralel)
-        # Her iki task aynı byte dizisini okur; bytes değişmez (immutable) olduğu için thread-safe
+        # Her iki task aynı byte dizisini okur; bytes immutable olduğu için thread-safe
         print(f"  [2/4] OCR işlemi başlıyor...")
         student_info, extracted_code = await asyncio.gather(
             self.ocr.extract_student_info(image_bytes),
-            self.ocr.extract_code(image_bytes)
+            self.ocr.extract_code(image_bytes, language)
         )
 
         if not extracted_code:
@@ -591,17 +803,87 @@ class CodexIQWorker:
             traceback.print_exc()
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
+    def _start_http_server(self):
+        """
+        Öğrenci Kod Test endpoint'i — ayrı thread'de Flask.
+        Sınav değerlendirme kuyruğundan bağımsız çalışır, bu yüzden
+        öğretmen batch değerlendirme yapıyorken bile öğrenci
+        kendi kod testini anında başlatabilir.
+        """
+        port = int(os.getenv("PYTHON_WORKER_HTTP_PORT", "8765"))
+        app = Flask(__name__)
+        # Flask'ın WSGI thread pool'u (her istek kendi thread'inde),
+        # her istek kendi asyncio loop'unu açar → paralellik.
+        evaluator = self.evaluator
+
+        @app.route("/health", methods=["GET"])
+        def health():
+            return jsonify({"status": "ok"})
+
+        @app.route("/code-test", methods=["POST"])
+        def code_test():
+            try:
+                data = request.get_json(force=True) or {}
+                code = (data.get("code") or "").strip()
+                language = data.get("language") or "unknown"
+                teacher_context = data.get("teacherContext") or ""
+                if not code:
+                    return jsonify({"success": False, "message": "Kod boş olamaz."}), 400
+
+                if not teacher_context:
+                    teacher_context = (
+                        f"The student is practicing {language} code on their own. "
+                        "There is no specific rubric. Evaluate correctness, syntax, logic and good practices. "
+                        "Score out of 100."
+                    )
+
+                print(f"\n [HTTP] /code-test geldi (Language: {language}, {len(code)} karakter)")
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    eval_result = loop.run_until_complete(
+                        evaluator.evaluate(code, teacher_context, language)
+                    )
+                finally:
+                    loop.close()
+
+                ev = eval_result.get("evaluation", {})
+                return jsonify({
+                    "success": True,
+                    "totalScore": ev.get("toplam_puan", 0),
+                    "syntaxErrors": ev.get("syntax_hatalari", []),
+                    "logicErrors": ev.get("mantik_hatalari", []),
+                    "gelisimAlanlari": ev.get("gelisim_alanlari", []),
+                    "hakemOzeti": ev.get("hakem_ozeti", ""),
+                    "genelDegerlendirme": ev.get("genel_degerlendirme", ""),
+                    "modelScores": eval_result.get("modelScores", {}),
+                })
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return jsonify({"success": False, "message": f"Değerlendirme hatası: {e}"}), 500
+
+        def _run():
+            # use_reloader=False: ana thread'i bloklamadan çalış
+            # threaded=True: eş zamanlı isteklere izin ver
+            app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False, threaded=True)
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        print(f" [*] HTTP Kod Test endpoint aktif: http://localhost:{port}/code-test")
+
     def start(self):
         """Worker'ı başlat"""
         self.connect()
+        self._start_http_server()
         self.channel.basic_consume(
             queue=LISTEN_QUEUE,
             on_message_callback=self._callback
         )
         print(f"\n {'='*60}")
-        print(f"  CodexIQ AI Worker v2.0")
-        print(f"  Modeller: Gemini 2.5 Flash + Groq Llama 3.3 + Ollama Llama 3.1")
-        print(f"  Hakem: Gemini 2.5 Flash")
+        print(f"  CodexIQ AI Worker v3.0 (Free Tier)")
+        print(f"  Jüri: Gemini 2.5 Flash + Groq Llama 3.3 + OpenRouter DeepSeek V3")
+        print(f"  Hakem: Groq Llama 3.3 (JSON mode) + Gemini fallback")
         print(f" {'='*60}")
         print(f" [*] Sınavlar bekleniyor... (Çıkmak için CTRL+C)\n")
 

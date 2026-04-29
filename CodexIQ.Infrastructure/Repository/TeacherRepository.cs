@@ -439,5 +439,38 @@ namespace CodexIQ.Infrastructure.Repository
             }
             catch { }
         }
+
+        public async Task<Exam?> GetExamWithPapersAsync(Guid examId, Guid teacherId)
+        {
+            return await _context.Exams
+                .Include(e => e.ExamPaper)
+                    .ThenInclude(ep => ep.FinalEvaluation)
+                .Include(e => e.ExamPaper)
+                    .ThenInclude(ep => ep.AIModelResults)
+                .Include(e => e.ExamPaper)
+                    .ThenInclude(ep => ep.ExtractedCode)
+                .Include(e => e.RubricCriterias)
+                .FirstOrDefaultAsync(e => e.Id == examId && e.TeacherId == teacherId);
+        }
+
+        public async Task DeleteExamAsync(Exam exam)
+        {
+            _context.Exams.Remove(exam);
+        }
+
+        public async Task<ExamPaper?> GetExamPaperByIdAsync(Guid examPaperId, Guid teacherId)
+        {
+            return await _context.ExamPapers
+                .Include(ep => ep.FinalEvaluation)
+                .Include(ep => ep.AIModelResults)
+                .Include(ep => ep.ExtractedCode)
+                .Include(ep => ep.Exam)
+                .FirstOrDefaultAsync(ep => ep.Id == examPaperId && ep.Exam.TeacherId == teacherId);
+        }
+
+        public async Task DeleteExamPaperAsync(ExamPaper paper)
+        {
+            _context.ExamPapers.Remove(paper);
+        }
     }
 }

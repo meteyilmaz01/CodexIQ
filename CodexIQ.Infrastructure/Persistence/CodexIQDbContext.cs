@@ -24,6 +24,7 @@ namespace CodexIQ.Infrastructure.Persistence
         public DbSet<RubricCriteria> RubricCriterias { get; set; }
         public DbSet<Log> Logs { get; set; }
         public DbSet<RegradeRequest> RegradeRequests { get; set; }
+        public DbSet<StudentInsight> StudentInsights { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

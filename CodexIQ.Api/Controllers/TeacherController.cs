@@ -320,4 +320,20 @@ public class TeacherController : ControllerBase
             message = $"Değerlendirme başlatıldı. {papers.Count} kağıt sıraya alındı."
         });
     }
+
+    [HttpDelete("exams/{examId}")]
+    public async Task<IActionResult> DeleteExam(Guid examId)
+    {
+        await _teacherService.DeleteExamAsync(GetUserId(), examId);
+        _logger.LogInformation("Sınav silindi: {ExamId}", examId);
+        return Ok(new { success = true, message = "Sınav silindi." });
+    }
+
+    [HttpDelete("papers/{examPaperId}")]
+    public async Task<IActionResult> DeleteExamPaper(Guid examPaperId)
+    {
+        await _teacherService.DeleteExamPaperAsync(GetUserId(), examPaperId);
+        _logger.LogInformation("Sınav kağıdı silindi: {ExamPaperId}", examPaperId);
+        return Ok(new { success = true, message = "Sınav kağıdı silindi." });
+    }
 }

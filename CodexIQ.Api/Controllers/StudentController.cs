@@ -71,6 +71,13 @@ public class StudentController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("insight")]
+    public async Task<IActionResult> GetInsight()
+    {
+        var result = await _studentService.GetInsightAsync(GetUserId());
+        return Ok(result);
+    }
+
     [HttpGet("results/{id}")]
     public async Task<IActionResult> GetExamResultDetail(Guid id)
     {

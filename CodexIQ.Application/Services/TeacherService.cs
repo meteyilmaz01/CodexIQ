@@ -240,6 +240,7 @@ public class TeacherService : ITeacherService
         var items = papers.Select(ep => new TeacherResultListItemDto
         {
             Id = ep.Id,
+            ExamId = ep.ExamId,
             StudentName = ep.Student != null
                 ? $"{ep.Student.FirstName} {ep.Student.LastName}"
                 : "OCR Bekleniyor",
@@ -666,5 +667,25 @@ public class TeacherService : ITeacherService
             PaperCount = e.ExamPaper.Count,
             CreatedDate = e.CreatedDate
         }).ToList();
+    }
+
+    public async Task DeleteExamAsync(Guid teacherId, Guid examId)
+    {
+        var exam = await _unitOfWork.Teacher.GetExamWithPapersAsync(examId, teacherId);
+        if (exam == null)
+            throw new NotFoundException("Sınav bulunamadı.");
+
+        await _unitOfWork.Teacher.DeleteExamAsync(exam);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task DeleteExamPaperAsync(Guid teacherId, Guid examPaperId)
+    {
+        var paper = await _unitOfWork.Teacher.GetExamPaperByIdAsync(examPaperId, teacherId);
+        if (paper == null)
+            throw new NotFoundException("Sınav kağıdı bulunamadı.");
+
+        await _unitOfWork.Teacher.DeleteExamPaperAsync(paper);
+        await _unitOfWork.SaveChangesAsync();
     }
 }

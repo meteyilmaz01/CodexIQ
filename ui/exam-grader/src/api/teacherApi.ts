@@ -47,6 +47,8 @@ export const teacherApi = {
   getClasses: () => api.get("/teacher/classes").then((r) => r.data),
   regenerateJoinCode: (classId: string) =>
     api.post(`/teacher/classes/${classId}/regenerate-code`).then((r) => r.data),
+  deleteExam: (examId: string) => api.delete(`/teacher/exams/${examId}`).then((r) => r.data),
+  deleteExamPaper: (examPaperId: string) => api.delete(`/teacher/papers/${examPaperId}`).then((r) => r.data),
   getRegradeRequests: () => api.get("/teacher/regrade-requests").then((r) => r.data),
   getRegradeRequestCount: () => api.get("/teacher/regrade-requests/count").then((r) => r.data),
   resolveRegradeRequest: (requestId: string, decision: string, teacherNote?: string, newScore?: number) =>

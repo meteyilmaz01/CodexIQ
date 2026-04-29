@@ -67,7 +67,7 @@ const TeacherLayout = () => {
       icon: <AuditOutlined />,
       label: (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span>İtiraz Talepleri</span>
+          <span>{t("regradeRequests")}</span>
           {regradeCount > 0 && (
             <span style={{ background: "#ff4d4f", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, fontWeight: 700, minWidth: 18, textAlign: "center" }}>
               {regradeCount}

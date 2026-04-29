@@ -28,18 +28,21 @@ const Dashboard = () => {
   const [stats, setStats] = useState<any>(null);
   const [recentResults, setRecentResults] = useState<any[]>([]);
   const [weakTopics, setWeakTopics] = useState<any[]>([]);
+  const [insight, setInsight] = useState<{ insightText: string; generatedAt?: string; isReady: boolean } | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [statsRes, resultsRes, topicsRes] = await Promise.all([
+        const [statsRes, resultsRes, topicsRes, insightRes] = await Promise.all([
           studentApi.getStats(),
           studentApi.getRecentResults(),
           studentApi.getWeakTopics(),
+          studentApi.getInsight(),
         ]);
         setStats(statsRes.data || statsRes);
         setRecentResults(resultsRes.data || resultsRes || []);
         setWeakTopics(topicsRes.data || topicsRes || []);
+        setInsight(insightRes.data || insightRes);
       } catch {
         // API error handled by interceptor
       } finally {
@@ -140,7 +143,7 @@ const Dashboard = () => {
         <Col xs={24} md={10}>
           <Card
             title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>{t("weakTopics")}</span>}
-            style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }}
+            style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginBottom: 16 }}
           >
             {weakTopics.length === 0 ? (
               <Text style={{ color: colors.textMuted }}>{t("noData") || "Veri yok"}</Text>
@@ -149,17 +152,45 @@ const Dashboard = () => {
                 <div key={i} style={{ marginBottom: i < weakTopics.length - 1 ? 16 : 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{topic.topic || topic.name}</Text>
-                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>%{topic.accuracy || topic.percentage || 0}</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>%{topic.successPercentage ?? topic.accuracy ?? topic.percentage ?? 0}</Text>
                   </div>
                   <Progress
-                    percent={topic.accuracy || topic.percentage || 0}
+                    percent={topic.successPercentage ?? topic.accuracy ?? topic.percentage ?? 0}
                     showInfo={false}
-                    strokeColor={(topic.accuracy || topic.percentage || 0) < 50 ? "#ff4d4f" : (topic.accuracy || topic.percentage || 0) < 70 ? "#faad14" : "#0ff"}
+                    strokeColor={(topic.successPercentage ?? topic.accuracy ?? topic.percentage ?? 0) < 50 ? "#ff4d4f" : (topic.successPercentage ?? topic.accuracy ?? topic.percentage ?? 0) < 70 ? "#faad14" : "#0ff"}
                     trailColor={colors.dividerColor}
                     size="small"
                   />
                 </div>
               ))
+            )}
+          </Card>
+
+          <Card
+            title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>{t("insightTitle")}</span>}
+            style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }}
+          >
+            {!insight ? (
+              <div style={{ textAlign: "center", padding: "12px 0" }}>
+                <Spin size="small" />
+                <Text style={{ color: colors.textMuted, marginLeft: 8 }}>{t("insightLoading")}</Text>
+              </div>
+            ) : !insight.isReady ? (
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>{t("insightNotReady")}</Text>
+            ) : (
+              <div>
+                {insight.insightText.split("\n").filter((line: string) => line.trim()).map((line: string, i: number) => (
+                  <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, alignItems: "flex-start" }}>
+                    <span style={{ color: "#0ff", fontWeight: 700, fontFamily: "'JetBrains Mono'", fontSize: 13, minWidth: 16 }}>{i + 1}.</span>
+                    <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 1.6 }}>{line.replace(/^\d+\.\s*/, "").replace(/^[-•]\s*/, "")}</Text>
+                  </div>
+                ))}
+                {insight.generatedAt && (
+                  <Text style={{ color: colors.textMuted, fontSize: 11, display: "block", marginTop: 8 }}>
+                    {new Date(insight.generatedAt).toLocaleDateString()}
+                  </Text>
+                )}
+              </div>
             )}
           </Card>
         </Col>

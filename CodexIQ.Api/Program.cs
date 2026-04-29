@@ -60,6 +60,7 @@ builder.Services.AddDbContext<CodexIQDbContext>(options =>
 builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<ExamResultConsumer>();
+    x.AddConsumer<InsightResultConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -74,6 +75,11 @@ builder.Services.AddMassTransit(x =>
             e.ConfigureConsumer<ExamResultConsumer>(context);
         });
 
+        cfg.ReceiveEndpoint("insight-result-queue", e =>
+        {
+            e.UseRawJsonDeserializer();
+            e.ConfigureConsumer<InsightResultConsumer>(context);
+        });
     });
 });
 
@@ -92,6 +98,7 @@ builder.Services.AddScoped<ITeacherService, TeacherService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IStudentInsightRepository, StudentInsightRepository>();
 builder.Services.AddHttpClient<IRabbitMqManagementService, RabbitMqManagementService>();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 

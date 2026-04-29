@@ -1,6 +1,8 @@
-﻿using CodexIQ.Application.DTOs.StudentsDTOs.StudentDashboardDTOS;
+﻿using CodexIQ.Application.DTOs.StudentsDTOs;
+using CodexIQ.Application.DTOs.StudentsDTOs.StudentDashboardDTOS;
 using CodexIQ.Application.Exceptions;
 using CodexIQ.Application.Interfaces.CoreDataInterfaces;
+using CodexIQ.Application.Interfaces.Repositories;
 using CodexIQ.Application.Interfaces.Services;
 using CodexIQ.Application.Interfaces.Storage;
 using System;
@@ -14,11 +16,13 @@ namespace CodexIQ.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IFileStorageService _fileStorage;
+        private readonly IStudentInsightRepository _insightRepository;
 
-        public StudentService(IUnitOfWork unitOfWork, IFileStorageService fileStorage)
+        public StudentService(IUnitOfWork unitOfWork, IFileStorageService fileStorage, IStudentInsightRepository insightRepository)
         {
             _unitOfWork = unitOfWork;
             _fileStorage = fileStorage;
+            _insightRepository = insightRepository;
         }
 
         public async Task<List<RecentResultsDto>> GetRecentResultsAsync(Guid studentId)
@@ -364,6 +368,21 @@ namespace CodexIQ.Application.Services
                 LogicErrorCount  = evaluations.Sum(fe => fe.LogicErrorCount),
                 TopSyntaxErrors  = syntaxErrors.GroupBy(e => e).OrderByDescending(g => g.Count()).Take(3).Select(g => g.Key).ToList(),
                 TopLogicErrors   = logicErrors.GroupBy(e => e).OrderByDescending(g => g.Count()).Take(3).Select(g => g.Key).ToList()
+            };
+        }
+
+        public async Task<StudentInsightDto> GetInsightAsync(Guid studentId)
+        {
+            var insight = await _insightRepository.GetByStudentIdAsync(studentId);
+
+            if (insight == null || string.IsNullOrWhiteSpace(insight.InsightText))
+                return new StudentInsightDto { IsReady = false };
+
+            return new StudentInsightDto
+            {
+                InsightText = insight.InsightText,
+                GeneratedAt = insight.InsightGeneratedAt,
+                IsReady = true
             };
         }
     }

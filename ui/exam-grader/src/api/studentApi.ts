@@ -19,4 +19,5 @@ export const studentApi = {
     api.get(`/student/results/${examPaperId}/regrade-request`).then((r) => r.data),
   getProgress: () => api.get("/student/analytics/progress").then((r) => r.data),
   getErrorSummary: () => api.get("/student/analytics/error-summary").then((r) => r.data),
+  getInsight: () => api.get("/student/insight").then((r) => r.data),
 };

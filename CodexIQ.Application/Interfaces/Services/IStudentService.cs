@@ -1,4 +1,5 @@
-﻿using CodexIQ.Application.DTOs.StudentsDTOs.StudentDashboardDTOS;
+﻿using CodexIQ.Application.DTOs.StudentsDTOs;
+using CodexIQ.Application.DTOs.StudentsDTOs.StudentDashboardDTOS;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -37,5 +38,6 @@ namespace CodexIQ.Application.Interfaces.Services
 
         Task<List<StudentProgressDto>> GetProgressAsync(Guid studentId);
         Task<StudentErrorSummaryDto> GetErrorSummaryAsync(Guid studentId);
+        Task<StudentInsightDto> GetInsightAsync(Guid studentId);
     }
 }

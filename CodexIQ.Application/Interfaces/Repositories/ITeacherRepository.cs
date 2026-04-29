@@ -44,4 +44,10 @@ public interface ITeacherRepository
     Task<List<AIModelResult>> GetExamModelResultsAsync(Guid examId, Guid teacherId);
     Task<List<TopExamErrorDto>> GetTopExamErrorsAsync(Guid examId, Guid teacherId);
     Task<List<Exam>> GetAllExamsAsync(Guid teacherId);
+
+    // Delete
+    Task<Exam?> GetExamWithPapersAsync(Guid examId, Guid teacherId);
+    Task DeleteExamAsync(Exam exam);
+    Task<ExamPaper?> GetExamPaperByIdAsync(Guid examPaperId, Guid teacherId);
+    Task DeleteExamPaperAsync(ExamPaper paper);
 }

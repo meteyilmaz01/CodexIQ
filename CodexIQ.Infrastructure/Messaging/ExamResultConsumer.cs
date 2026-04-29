@@ -13,11 +13,13 @@ namespace CodexIQ.Infrastructure.Messaging
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly CodexIQDbContext _dbContext;
+        private readonly ISendEndpointProvider _sendEndpointProvider;
 
-        public ExamResultConsumer(IUnitOfWork unitOfWork, CodexIQDbContext dbContext)
+        public ExamResultConsumer(IUnitOfWork unitOfWork, CodexIQDbContext dbContext, ISendEndpointProvider sendEndpointProvider)
         {
             _unitOfWork = unitOfWork;
             _dbContext = dbContext;
+            _sendEndpointProvider = sendEndpointProvider;
         }
 
         public async Task Consume(ConsumeContext<ExamResultPublished> context)
@@ -242,6 +244,104 @@ namespace CodexIQ.Infrastructure.Messaging
                 Console.WriteLine($"[CONSUMER][KRİTİK HATA] Kaydetme hatası: {ex.Message}");
                 throw;
             }
+
+            // Sınav başarılıysa ve bir öğrenciye atandıysa insight tetikle
+            if (!isFailed && paper.StudentId.HasValue)
+            {
+                await TriggerInsightGenerationAsync(paper.StudentId.Value, eval);
+            }
+        }
+
+        private async Task TriggerInsightGenerationAsync(Guid studentId, EvaluationMessage? eval)
+        {
+            try
+            {
+                // Öğrencinin mevcut insight kaydını ve tüm sınavlarını çek
+                var insight = await _dbContext.StudentInsights
+                    .FirstOrDefaultAsync(s => s.StudentId == studentId);
+
+                var allEvals = await _dbContext.ExamPapers
+                    .Where(ep => ep.StudentId == studentId && ep.FinalEvaluation != null)
+                    .Include(ep => ep.FinalEvaluation)
+                    .Select(ep => ep.FinalEvaluation!)
+                    .ToListAsync();
+
+                int totalExamCount = allEvals.Count;
+
+                // Dirty flag'i set et (veya ilk kez oluştur)
+                if (insight == null)
+                {
+                    insight = new StudentInsight
+                    {
+                        StudentId = studentId,
+                        IsInsightDirty = true,
+                        ExamCountAtLastInsight = 0
+                    };
+                    await _dbContext.StudentInsights.AddAsync(insight);
+                }
+                else
+                {
+                    insight.IsInsightDirty = true;
+                }
+                await _dbContext.SaveChangesAsync();
+
+                // Full reset mi, delta mı?
+                int examsSinceLastInsight = totalExamCount - insight.ExamCountAtLastInsight;
+                bool isFullReset = insight.ExamCountAtLastInsight == 0 || examsSinceLastInsight >= 5;
+
+                var command = new GenerateInsightCommand
+                {
+                    StudentId = studentId,
+                    CurrentInsightText = insight.InsightText,
+                    ExamCountAtLastInsight = insight.ExamCountAtLastInsight,
+                    TotalExamCount = totalExamCount,
+                    IsFullReset = isFullReset
+                };
+
+                if (isFullReset)
+                {
+                    // Tüm sınavların hatalarını gönder (son 10 ile sınırla)
+                    var recentEvals = allEvals.TakeLast(10).ToList();
+                    command.AllErrors = recentEvals.Select((fe, i) => new InsightErrorEntry
+                    {
+                        ExamIndex = i + 1,
+                        SyntaxErrors = ParseErrorDescriptions(fe.SyntaxErrorsJson),
+                        LogicErrors = ParseErrorDescriptions(fe.LogicErrorsJson)
+                    }).ToList();
+                }
+                else
+                {
+                    // Sadece yeni sınavın hatalarını gönder
+                    command.NewExamSyntaxErrors = eval?.SyntaxHatalari?
+                        .Select(h => h.Aciklama).Where(a => !string.IsNullOrWhiteSpace(a)).ToList() ?? new();
+                    command.NewExamLogicErrors = eval?.MantikHatalari?
+                        .Select(h => h.Aciklama).Where(a => !string.IsNullOrWhiteSpace(a)).ToList() ?? new();
+                }
+
+                var endpoint = await _sendEndpointProvider.GetSendEndpoint(new Uri("queue:generate-insight-queue"));
+                await endpoint.Send(command);
+                Console.WriteLine($"[CONSUMER] Insight tetiklendi → StudentId: {studentId}, FullReset: {isFullReset}, ToplamSınav: {totalExamCount}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CONSUMER][UYARI] Insight tetikleme hatası (kritik değil): {ex.Message}");
+            }
+        }
+
+        private static List<string> ParseErrorDescriptions(string? errorsJson)
+        {
+            if (string.IsNullOrWhiteSpace(errorsJson) || errorsJson == "[]")
+                return new List<string>();
+
+            try
+            {
+                var items = JsonSerializer.Deserialize<List<JsonElement>>(errorsJson);
+                return items?
+                    .Select(e => e.TryGetProperty("Description", out var d) ? d.GetString() ?? "" : "")
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .ToList() ?? new();
+            }
+            catch { return new List<string>(); }
         }
 
         

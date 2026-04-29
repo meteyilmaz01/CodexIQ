@@ -54,4 +54,8 @@ public interface ITeacherService
 
     // Announcements
     Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync();
+
+    // Delete
+    Task DeleteExamAsync(Guid teacherId, Guid examId);
+    Task DeleteExamPaperAsync(Guid teacherId, Guid examPaperId);
 }

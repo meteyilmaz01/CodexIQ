@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Card, Table, Tag, Input, Select, Typography, Button, Space, Dropdown, Tooltip, message } from "antd";
-import { SearchOutlined, EyeOutlined, DownloadOutlined, ShareAltOutlined, FileExcelOutlined, FilePdfOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { Card, Table, Tag, Input, Select, Typography, Button, Space, Dropdown, Tooltip, message, Popconfirm } from "antd";
+import { SearchOutlined, EyeOutlined, DownloadOutlined, ShareAltOutlined, FileExcelOutlined, FilePdfOutlined, CheckCircleOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
 import { useT } from "../../hooks/useT";
@@ -40,6 +40,30 @@ const TeacherResults = () => {
   };
 
   const getScoreColor = (s: number) => { if (s >= 85) return "#52c41a"; if (s >= 70) return colors.accent; if (s >= 50) return "#faad14"; return "#ff4d4f"; };
+
+  const handleDeletePaper = async (id: string) => {
+    try {
+      await teacherApi.deleteExamPaper(id);
+      message.success(t("deleted") || "Silindi");
+      fetchResults(pagination.current, pagination.pageSize);
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Hata");
+    }
+  };
+
+  const handleDeleteExam = async () => {
+    const exam = results.find((r: any) => (r.exam || r.examName || r.ExamName) === examFilter);
+    if (!exam?.examId && !exam?.ExamId) { message.error("Sınav ID bulunamadı"); return; }
+    try {
+      await teacherApi.deleteExam(exam.examId || exam.ExamId);
+      message.success(t("deleted") || "Sınav silindi");
+      setExamFilter(null);
+      setSearchParams({});
+      fetchResults(1);
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Hata");
+    }
+  };
 
   const handleBulkShare = async () => {
     try { await teacherApi.bulkShare(selectedRows); message.success(`${selectedRows.length} ${t("resultsShared")}`); setSelectedRows([]); fetchResults(pagination.current, pagination.pageSize); }
@@ -91,7 +115,18 @@ const TeacherResults = () => {
       r.shared ? <Tag icon={<CheckCircleOutlined />} color="success">{t("shared")}</Tag> : <Tag color="default">{t("notShared")}</Tag>
     },
     { title: "", key: "action", render: (_: unknown, r: any) => (
-      <Button type="text" icon={<EyeOutlined />} onClick={() => navigate(`/teacher/results/${r.id}`)} style={{ color: colors.accent }}>{t("detail")}</Button>
+      <Space>
+        <Button type="text" icon={<EyeOutlined />} onClick={() => navigate(`/teacher/results/${r.id}`)} style={{ color: colors.accent }}>{t("detail")}</Button>
+        <Popconfirm
+          title={t("deleteConfirm")}
+          onConfirm={() => handleDeletePaper(r.id)}
+          okText={t("yes")}
+          cancelText={t("no")}
+          okButtonProps={{ danger: true }}
+        >
+          <Button type="text" icon={<DeleteOutlined />} danger />
+        </Popconfirm>
+      </Space>
     )},
   ];
 
@@ -113,6 +148,17 @@ const TeacherResults = () => {
           <Input placeholder={t("searchStudent")} prefix={<SearchOutlined style={{ color: colors.textDimmed }} />} value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 220 }} />
           <Select placeholder={t("course")} allowClear onChange={(v) => setCourseFilter(v)} options={coursesList.map((c) => ({ label: c, value: c }))} style={{ minWidth: 160 }} />
           <Select placeholder={t("exam")} allowClear value={examFilter} onChange={handleExamFilterChange} options={exams.map((e) => ({ label: e, value: e }))} style={{ minWidth: 200 }} />
+          {examFilter && (
+            <Popconfirm
+              title={t("deleteExamConfirm")}
+              onConfirm={handleDeleteExam}
+              okText={t("yes")}
+              cancelText={t("no")}
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger icon={<DeleteOutlined />}>{t("deleteExam")}</Button>
+            </Popconfirm>
+          )}
         </div>
       </Card>
 
