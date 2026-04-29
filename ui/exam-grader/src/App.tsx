@@ -12,6 +12,7 @@ import ExamResultDetail from "./pages/student/ExamResultDetail";
 import CodeTest from "./pages/student/CodeTest";
 import Messages from "./pages/student/Messages";
 import Profile from "./pages/student/Profile";
+import StudentAnalytics from "./pages/student/StudentAnalytics";
 
 // Teacher
 import TeacherLayout from "./pages/teacher/TeacherLayout";
@@ -23,6 +24,7 @@ import StudentList from "./pages/teacher/StudentList";
 import TeacherMessages from "./pages/teacher/TeacherMessages";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
 import RegradeRequests from "./pages/teacher/RegradeRequests";
+import TeacherAnalytics from "./pages/teacher/TeacherAnalytics";
 
 // Admin
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -61,6 +63,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="results" element={<ExamResults />} />
             <Route path="results/:id" element={<ExamResultDetail />} />
+            <Route path="analytics" element={<StudentAnalytics />} />
             <Route path="code-test" element={<CodeTest />} />
             <Route path="messages" element={<Messages />} />
             <Route path="profile" element={<Profile />} />
@@ -72,6 +75,7 @@ function App() {
             <Route path="upload" element={<ExamUpload />} />
             <Route path="results" element={<TeacherResults />} />
             <Route path="results/:id" element={<TeacherResultDetail />} />
+            <Route path="analytics" element={<TeacherAnalytics />} />
             <Route path="students" element={<StudentList />} />
             <Route path="regrade-requests" element={<RegradeRequests />} />
             <Route path="messages" element={<TeacherMessages />} />

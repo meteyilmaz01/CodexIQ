@@ -386,6 +386,83 @@ const translations = {
     startTime: "Başlangıç",
     noData: "Veri yok",
     selectConversation: "Bir sohbet seçin",
+
+    // Student Analytics
+    analytics: "Analitik",
+    progressOverTime: "Zaman İçindeki Gelişim",
+    averageScore: "Ortalama Puan",
+    topSyntaxErrors: "En Sık Sözdizim Hataları",
+    topLogicErrors: "En Sık Mantık Hataları",
+    noSyntaxErrors: "Sözdizim hatası bulunamadı",
+    noLogicErrors: "Mantık hatası bulunamadı",
+    noSharedResults: "Henüz paylaşılmış sınav sonucu yok",
+    syntaxErrorCount: "Sözdizim Hatası",
+    logicErrorCount: "Mantık Hatası",
+
+    // Teacher Analytics
+    classAnalytics: "Sınıf Analitikleri",
+    selectExam: "Sınav seç:",
+    totalPapers: "Toplam Kağıt",
+    totalErrorTypes: "Toplam Hata Türü",
+    syntaxErrorTypes: "Sözdizim Hata Türü",
+    logicErrorTypes: "Mantık Hata Türü",
+    selectExamForAnalysis: "Analiz için bir sınav seçin",
+    noErrorRecords: "Bu sınav için hata kaydı bulunamadı. Kağıtların değerlendirilmiş olması gerekiyor.",
+    syntaxErrorsTitle: "Sözdizim Hataları",
+    logicErrorsTitle: "Mantık Hataları",
+    syntax: "Sözdizim",
+    seenInStudents: "öğrencide görüldü",
+
+    // Regrade Requests
+    regradeRequests: "İtiraz Talepleri",
+    regradeRequestsSubtitle: "Öğrencilerin not itirazlarını incele ve sonuçlandır",
+    currentScore: "Mevcut Puan",
+    reason: "Gerekçe",
+    approve: "Onayla",
+    reject: "Reddet",
+    approveAppeal: "İtirazı Onayla",
+    rejectAppeal: "İtirazı Reddet",
+    studentReason: "Öğrenci gerekçesi",
+    newScore: "Yeni puan",
+    newScoreHint: "(boş bırakırsan puan değişmez)",
+    responseNote: "Yanıt notu",
+    optional: "(opsiyonel)",
+    responseNotePlaceholder: "Öğrenciye iletilecek açıklama...",
+    appealApproved: "İtiraz onaylandı.",
+    appealRejected: "İtiraz reddedildi.",
+    noPendingAppeals: "Bekleyen itiraz talebi yok",
+
+    // Join Class
+    joinClass: "Sınıfa Katıl",
+    joinClassSubtitle: "Öğretmenin verdiği kodu gir",
+    joinClassInstruction: "Öğretmenin sana verdiği 6 haneli katılım kodunu gir.",
+    joinClassPlaceholder: "Örn: AB3K9Z",
+    join: "Katıl",
+    joinSuccess: "sınıfına başarıyla katıldınız!",
+    invalidJoinCode: "Geçersiz katılım kodu",
+
+    // Join Code (Teacher StudentList)
+    joinCode: "Katılım Kodu",
+    copyCode: "Kopyala",
+    regenerateCode: "Kodu Yenile",
+    codeCopied: "Kod kopyalandı!",
+    regenerateConfirm: "Kodu yenilemek istediğinize emin misiniz? Eski kod geçersiz olacak.",
+    codeRegenerated: "Katılım kodu yenilendi",
+
+    // Rubric Breakdown (Student)
+    rubricBreakdown: "Rubrik Puan Dağılımı",
+    earnedPoints: "Kazanılan",
+    maxPoints: "Maksimum",
+
+    // Regrade (Student ExamResultDetail)
+    regradeRequest: "Yeniden Değerlendirme Talebi",
+    regradeReasonPlaceholder: "Neden yeniden değerlendirme istiyorsunuz?",
+    regradeSubmitted: "İtiraz talebiniz gönderildi.",
+    regradeAlreadyPending: "Zaten bekleyen bir itiraz talebiniz var.",
+    regradeStatusPending: "İtirazınız İnceleniyor",
+    regradeStatusApproved: "İtirazınız Onaylandı",
+    regradeStatusRejected: "İtirazınız Reddedildi",
+    submitAppeal: "İtiraz Gönder",
   },
 
   en: {
@@ -775,6 +852,83 @@ const translations = {
     startTime: "Start Time",
     noData: "No data",
     selectConversation: "Select a conversation",
+
+    // Student Analytics
+    analytics: "Analytics",
+    progressOverTime: "Progress Over Time",
+    averageScore: "Average Score",
+    topSyntaxErrors: "Most Common Syntax Errors",
+    topLogicErrors: "Most Common Logic Errors",
+    noSyntaxErrors: "No syntax errors found",
+    noLogicErrors: "No logic errors found",
+    noSharedResults: "No shared exam results yet",
+    syntaxErrorCount: "Syntax Errors",
+    logicErrorCount: "Logic Errors",
+
+    // Teacher Analytics
+    classAnalytics: "Class Analytics",
+    selectExam: "Select exam:",
+    totalPapers: "Total Papers",
+    totalErrorTypes: "Total Error Types",
+    syntaxErrorTypes: "Syntax Error Types",
+    logicErrorTypes: "Logic Error Types",
+    selectExamForAnalysis: "Select an exam to analyze",
+    noErrorRecords: "No error records found for this exam. Papers need to be evaluated first.",
+    syntaxErrorsTitle: "Syntax Errors",
+    logicErrorsTitle: "Logic Errors",
+    syntax: "Syntax",
+    seenInStudents: "students affected",
+
+    // Regrade Requests
+    regradeRequests: "Appeals",
+    regradeRequestsSubtitle: "Review and resolve student grade appeals",
+    currentScore: "Current Score",
+    reason: "Reason",
+    approve: "Approve",
+    reject: "Reject",
+    approveAppeal: "Approve Appeal",
+    rejectAppeal: "Reject Appeal",
+    studentReason: "Student's reason",
+    newScore: "New score",
+    newScoreHint: "(leave empty to keep current score)",
+    responseNote: "Response note",
+    optional: "(optional)",
+    responseNotePlaceholder: "Explanation to send to the student...",
+    appealApproved: "Appeal approved.",
+    appealRejected: "Appeal rejected.",
+    noPendingAppeals: "No pending appeals",
+
+    // Join Class
+    joinClass: "Join Class",
+    joinClassSubtitle: "Enter the code given by your teacher",
+    joinClassInstruction: "Enter the 6-character join code given to you by your teacher.",
+    joinClassPlaceholder: "e.g. AB3K9Z",
+    join: "Join",
+    joinSuccess: "successfully joined!",
+    invalidJoinCode: "Invalid join code",
+
+    // Join Code (Teacher StudentList)
+    joinCode: "Join Code",
+    copyCode: "Copy",
+    regenerateCode: "Regenerate Code",
+    codeCopied: "Code copied!",
+    regenerateConfirm: "Are you sure you want to regenerate the code? The old code will be invalidated.",
+    codeRegenerated: "Join code regenerated",
+
+    // Rubric Breakdown (Student)
+    rubricBreakdown: "Rubric Score Breakdown",
+    earnedPoints: "Earned",
+    maxPoints: "Maximum",
+
+    // Regrade (Student ExamResultDetail)
+    regradeRequest: "Grade Appeal",
+    regradeReasonPlaceholder: "Why are you requesting a re-evaluation?",
+    regradeSubmitted: "Your appeal has been submitted.",
+    regradeAlreadyPending: "You already have a pending appeal.",
+    regradeStatusPending: "Your Appeal is Under Review",
+    regradeStatusApproved: "Your Appeal was Approved",
+    regradeStatusRejected: "Your Appeal was Rejected",
+    submitAppeal: "Submit Appeal",
   },
 } as const;
 

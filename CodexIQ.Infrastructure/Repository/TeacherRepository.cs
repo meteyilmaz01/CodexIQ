@@ -373,5 +373,71 @@ namespace CodexIQ.Infrastructure.Repository
             return await _context.RegradeRequests
                 .CountAsync(r => r.TeacherId == teacherId && r.Status == RegradeStatus.Pending);
         }
+
+        public async Task<List<AIModelResult>> GetExamModelResultsAsync(Guid examId, Guid teacherId)
+        {
+            return await _context.AIModelResults
+                .Where(r => r.ExamPaper.ExamId == examId
+                         && r.ExamPaper.Exam.TeacherId == teacherId
+                         && r.ExamPaper.FinalEvaluation != null)
+                .Include(r => r.ExamPaper)
+                .ToListAsync();
+        }
+
+        public async Task<List<TopExamErrorDto>> GetTopExamErrorsAsync(Guid examId, Guid teacherId)
+        {
+            var evaluations = await _context.FinalEvaluations
+                .Where(fe => fe.ExamPaper.ExamId == examId
+                          && fe.ExamPaper.Exam.TeacherId == teacherId)
+                .ToListAsync();
+
+            var errors = new List<(string Description, string Type)>();
+
+            foreach (var fe in evaluations)
+            {
+                ExtractErrors(fe.SyntaxErrorsJson, "Syntax", errors);
+                ExtractErrors(fe.LogicErrorsJson, "Logic", errors);
+            }
+
+            return errors
+                .GroupBy(e => (e.Description, e.Type))
+                .Select(g => new TopExamErrorDto
+                {
+                    Description = g.Key.Description,
+                    Type        = g.Key.Type,
+                    Count       = g.Count()
+                })
+                .OrderByDescending(e => e.Count)
+                .Take(3)
+                .ToList();
+        }
+
+        public async Task<List<Exam>> GetAllExamsAsync(Guid teacherId)
+        {
+            return await _context.Exams
+                .Where(e => e.TeacherId == teacherId && e.IsActive)
+                .Include(e => e.Course)
+                .Include(e => e.ExamPaper.Where(p => p.FinalEvaluation != null))
+                .OrderByDescending(e => e.CreatedDate)
+                .ToListAsync();
+        }
+
+        private static void ExtractErrors(string? json, string type, List<(string, string)> list)
+        {
+            if (string.IsNullOrEmpty(json)) return;
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                foreach (var el in doc.RootElement.EnumerateArray())
+                {
+                    string desc = el.TryGetProperty("Description", out var p) ? p.GetString() ?? "" :
+                                  el.TryGetProperty("description", out var d) ? d.GetString() ?? "" :
+                                  el.TryGetProperty("aciklama", out var a) ? a.GetString() ?? "" : "";
+                    if (!string.IsNullOrEmpty(desc))
+                        list.Add((desc, type));
+                }
+            }
+            catch { }
+        }
     }
 }

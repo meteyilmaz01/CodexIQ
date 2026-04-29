@@ -41,7 +41,7 @@ const StudentListPage = () => {
       const res = await teacherApi.regenerateJoinCode(classId);
       const newCode = res.joinCode ?? res;
       setClasses((prev) => prev.map((c) => c.id === classId ? { ...c, joinCode: newCode } : c));
-      message.success("Katılım kodu yenilendi");
+      message.success(t("codeRegenerated"));
     } catch { message.error("Kod yenilenirken hata oluştu"); }
   };
 
@@ -111,14 +111,14 @@ const StudentListPage = () => {
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 20, fontWeight: 800, color: colors.accent, letterSpacing: 4 }}>
                   {c.joinCode || "------"}
                 </span>
-                <Tooltip title="Kodu kopyala">
-                  <Button type="text" size="small" icon={<CopyOutlined />} onClick={() => { navigator.clipboard.writeText(c.joinCode || ""); message.success("Kod kopyalandı"); }} style={{ color: colors.textMuted }} />
+                <Tooltip title={t("copyCode")}>
+                  <Button type="text" size="small" icon={<CopyOutlined />} onClick={() => { navigator.clipboard.writeText(c.joinCode || ""); message.success(t("codeCopied")); }} style={{ color: colors.textMuted }} />
                 </Tooltip>
-                <Tooltip title="Yeni kod üret">
+                <Tooltip title={t("regenerateCode")}>
                   <Button type="text" size="small" icon={<ReloadOutlined />} onClick={() => handleRegenerateCode(c.id)} style={{ color: colors.textMuted }} />
                 </Tooltip>
               </div>
-              <Text style={{ color: colors.textDimmed, fontSize: 11 }}>Katılım kodu • {c.studentCount ?? 0} öğrenci</Text>
+              <Text style={{ color: colors.textDimmed, fontSize: 11 }}>{t("joinCode")} • {c.studentCount ?? 0} {t("student")}</Text>
             </Card>
           ))}
         </div>

@@ -34,5 +34,8 @@ namespace CodexIQ.Application.Interfaces.Services
 
         Task CreateRegradeRequestAsync(Guid studentId, Guid examPaperId, string reason);
         Task<RegradeRequestStatusDto?> GetRegradeRequestStatusAsync(Guid studentId, Guid examPaperId);
+
+        Task<List<StudentProgressDto>> GetProgressAsync(Guid studentId);
+        Task<StudentErrorSummaryDto> GetErrorSummaryAsync(Guid studentId);
     }
 }

@@ -149,6 +149,20 @@ public class StudentController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("analytics/progress")]
+    public async Task<IActionResult> GetProgress()
+    {
+        var result = await _studentService.GetProgressAsync(GetUserId());
+        return Ok(result);
+    }
+
+    [HttpGet("analytics/error-summary")]
+    public async Task<IActionResult> GetErrorSummary()
+    {
+        var result = await _studentService.GetErrorSummaryAsync(GetUserId());
+        return Ok(result);
+    }
+
     [HttpPost("join-class")]
     public async Task<IActionResult> JoinClass([FromBody] JoinClassRequestDto request)
     {

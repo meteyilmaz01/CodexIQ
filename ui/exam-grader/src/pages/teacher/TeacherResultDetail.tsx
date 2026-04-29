@@ -254,6 +254,7 @@ const TeacherResultDetail = () => {
               </div>
             </Card>
           )}
+
         </Col>
       </Row>
     </div>

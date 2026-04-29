@@ -48,6 +48,10 @@ public interface ITeacherService
     Task ResolveRegradeRequestAsync(Guid teacherId, Guid requestId, ResolveRegradeRequestDto dto);
     Task<int> GetPendingRegradeCountAsync(Guid teacherId);
 
+    // Analytics
+    Task<List<TopExamErrorDto>> GetTopExamErrorsAsync(Guid teacherId, Guid examId);
+    Task<List<ExamSummaryDto>> GetAllExamsAsync(Guid teacherId);
+
     // Announcements
     Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync();
 }

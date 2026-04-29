@@ -300,5 +300,71 @@ namespace CodexIQ.Application.Services
             return result;
         }
 
+        public async Task<List<StudentProgressDto>> GetProgressAsync(Guid studentId)
+        {
+            var papers = await _unitOfWork.Student.GetProgressPapersAsync(studentId);
+
+            return papers.Select(ep =>
+            {
+                int maxScore = ep.Exam.RubricCriterias != null && ep.Exam.RubricCriterias.Any()
+                    ? ep.Exam.RubricCriterias.Sum(r => r.MaxPoints)
+                    : 100;
+
+                return new StudentProgressDto
+                {
+                    ExamName   = ep.Exam.Name,
+                    CourseName = ep.Exam.Course.Name,
+                    Date       = ep.FinalEvaluation!.EvaluatedAt,
+                    Score      = ep.FinalEvaluation.FinalScore,
+                    MaxScore   = maxScore
+                };
+            }).ToList();
+        }
+
+        public async Task<StudentErrorSummaryDto> GetErrorSummaryAsync(Guid studentId)
+        {
+            var evaluations = await _unitOfWork.Student.GetAllFinalEvaluationsAsync(studentId);
+
+            var syntaxErrors = new List<string>();
+            var logicErrors = new List<string>();
+
+            foreach (var fe in evaluations)
+            {
+                if (!string.IsNullOrEmpty(fe.SyntaxErrorsJson))
+                {
+                    try
+                    {
+                        var items = JsonSerializer.Deserialize<List<JsonElement>>(fe.SyntaxErrorsJson);
+                        if (items != null)
+                            syntaxErrors.AddRange(items.Select(e =>
+                                e.TryGetProperty("Description", out var p) ? p.GetString() ?? "" :
+                                e.TryGetProperty("description", out var d) ? d.GetString() ?? "" :
+                                e.TryGetProperty("aciklama", out var a) ? a.GetString() ?? "" : "").Where(s => !string.IsNullOrEmpty(s)));
+                    }
+                    catch { }
+                }
+                if (!string.IsNullOrEmpty(fe.LogicErrorsJson))
+                {
+                    try
+                    {
+                        var items = JsonSerializer.Deserialize<List<JsonElement>>(fe.LogicErrorsJson);
+                        if (items != null)
+                            logicErrors.AddRange(items.Select(e =>
+                                e.TryGetProperty("Description", out var p) ? p.GetString() ?? "" :
+                                e.TryGetProperty("description", out var d) ? d.GetString() ?? "" :
+                                e.TryGetProperty("aciklama", out var a) ? a.GetString() ?? "" : "").Where(s => !string.IsNullOrEmpty(s)));
+                    }
+                    catch { }
+                }
+            }
+
+            return new StudentErrorSummaryDto
+            {
+                SyntaxErrorCount = evaluations.Sum(fe => fe.SyntaxErrorCount),
+                LogicErrorCount  = evaluations.Sum(fe => fe.LogicErrorCount),
+                TopSyntaxErrors  = syntaxErrors.GroupBy(e => e).OrderByDescending(g => g.Count()).Take(3).Select(g => g.Key).ToList(),
+                TopLogicErrors   = logicErrors.GroupBy(e => e).OrderByDescending(g => g.Count()).Take(3).Select(g => g.Key).ToList()
+            };
+        }
     }
 }

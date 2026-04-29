@@ -54,4 +54,7 @@ export const teacherApi = {
   updateRubricScores: (examPaperId: string, items: { criteria: string; maxPoints: number; earnedPoints: number }[]) =>
     api.put(`/teacher/results/${examPaperId}/rubric-scores`, { items }).then((r) => r.data),
   getAnnouncements: () => api.get("/teacher/announcements").then((r) => r.data),
+  getAnalyticsExams: () => api.get("/teacher/analytics/exams").then((r) => r.data),
+  getTopExamErrors: (examId: string) =>
+    api.get("/teacher/analytics/top-errors", { params: { examId } }).then((r) => r.data),
 };

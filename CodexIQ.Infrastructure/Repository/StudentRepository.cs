@@ -185,5 +185,25 @@ namespace CodexIQ.Infrastructure.Repository
             _context.RegradeRequests.Add(request);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<ExamPaper>> GetProgressPapersAsync(Guid studentId)
+        {
+            return await _context.ExamPapers
+                .Where(ep => ep.StudentId == studentId && ep.FinalEvaluation != null && ep.FinalEvaluation.IsShared)
+                .Include(ep => ep.Exam)
+                    .ThenInclude(e => e.Course)
+                .Include(ep => ep.FinalEvaluation)
+                .Include(ep => ep.Exam)
+                    .ThenInclude(e => e.RubricCriterias)
+                .OrderBy(ep => ep.FinalEvaluation!.EvaluatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<FinalEvaluation>> GetAllFinalEvaluationsAsync(Guid studentId)
+        {
+            return await _context.FinalEvaluations
+                .Where(fe => fe.ExamPaper.StudentId == studentId && fe.IsShared)
+                .ToListAsync();
+        }
     }
 }

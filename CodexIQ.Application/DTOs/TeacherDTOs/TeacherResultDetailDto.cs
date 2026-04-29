@@ -2,6 +2,7 @@
 public class TeacherResultDetailDto
 {
     public Guid Id { get; set; }
+    public Guid ExamId { get; set; }
     public string StudentName { get; set; } = string.Empty;
     public string StudentNo { get; set; } = string.Empty;
     public string ExamName { get; set; } = string.Empty;

@@ -40,4 +40,8 @@ public interface ITeacherRepository
     Task<RegradeRequest?> GetRegradeRequestByIdAsync(Guid requestId, Guid teacherId);
     Task UpdateRegradeRequestAsync(RegradeRequest request);
     Task<int> GetPendingRegradeCountAsync(Guid teacherId);
+
+    Task<List<AIModelResult>> GetExamModelResultsAsync(Guid examId, Guid teacherId);
+    Task<List<TopExamErrorDto>> GetTopExamErrorsAsync(Guid examId, Guid teacherId);
+    Task<List<Exam>> GetAllExamsAsync(Guid teacherId);
 }

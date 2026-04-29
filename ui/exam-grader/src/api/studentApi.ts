@@ -17,4 +17,6 @@ export const studentApi = {
     api.post(`/student/results/${examPaperId}/regrade-request`, { reason }).then((r) => r.data),
   getRegradeRequestStatus: (examPaperId: string) =>
     api.get(`/student/results/${examPaperId}/regrade-request`).then((r) => r.data),
+  getProgress: () => api.get("/student/analytics/progress").then((r) => r.data),
+  getErrorSummary: () => api.get("/student/analytics/error-summary").then((r) => r.data),
 };

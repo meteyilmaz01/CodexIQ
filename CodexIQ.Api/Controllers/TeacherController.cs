@@ -259,6 +259,21 @@ public class TeacherController : ControllerBase
         return Ok(new { joinCode = newCode });
     }
 
+    [HttpGet("analytics/exams")]
+    public async Task<IActionResult> GetAllExams()
+    {
+        var result = await _teacherService.GetAllExamsAsync(GetUserId());
+        return Ok(result);
+    }
+
+    [HttpGet("analytics/top-errors")]
+    public async Task<IActionResult> GetTopExamErrors([FromQuery] Guid examId)
+    {
+        var result = await _teacherService.GetTopExamErrorsAsync(GetUserId(), examId);
+        _logger.LogInformation("Top exam errors alındı (ExamId: {ExamId})", examId);
+        return Ok(result);
+    }
+
     [HttpGet("announcements")]
     public async Task<IActionResult> GetAnnouncements()
     {

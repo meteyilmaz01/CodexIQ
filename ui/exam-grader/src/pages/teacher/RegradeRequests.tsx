@@ -3,6 +3,7 @@ import { Card, Typography, Table, Tag, Button, Modal, Input, InputNumber, Space,
 import { CheckOutlined, CloseOutlined, EyeOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
+import { useT } from "../../hooks/useT";
 import { teacherApi } from "../../api/teacherApi";
 
 const { Title, Text, Paragraph } = Typography;
@@ -15,6 +16,7 @@ const RegradeRequests = () => {
   const [newScore, setNewScore] = useState<number | null>(null);
   const [resolveLoading, setResolveLoading] = useState(false);
   const colors = useThemeColors();
+  const t = useT();
   const navigate = useNavigate();
 
   const load = async () => {
@@ -45,7 +47,7 @@ const RegradeRequests = () => {
         teacherNote || undefined,
         resolveModal.decision === "Approved" && newScore !== null ? newScore : undefined
       );
-      message.success(resolveModal.decision === "Approved" ? "İtiraz onaylandı." : "İtiraz reddedildi.");
+      message.success(resolveModal.decision === "Approved" ? t("appealApproved") : t("appealRejected"));
       setResolveModal({ open: false, request: null, decision: "Approved" });
       load();
     } catch (err: any) {
@@ -57,12 +59,12 @@ const RegradeRequests = () => {
 
   const columns = [
     {
-      title: "Öğrenci",
+      title: t("student"),
       key: "student",
       render: (_: unknown, r: any) => <Text style={{ color: colors.textSecondary, fontWeight: 600 }}>{r.studentName}</Text>,
     },
     {
-      title: "Sınav",
+      title: t("exam"),
       key: "exam",
       render: (_: unknown, r: any) => (
         <div>
@@ -72,21 +74,21 @@ const RegradeRequests = () => {
       ),
     },
     {
-      title: "Mevcut Puan",
+      title: t("currentScore"),
       key: "score",
       render: (_: unknown, r: any) => (
         <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 700, color: getScoreColor(r.currentScore) }}>{r.currentScore}</span>
       ),
     },
     {
-      title: "Gerekçe",
+      title: t("reason"),
       key: "reason",
       render: (_: unknown, r: any) => (
         <Paragraph ellipsis={{ rows: 2 }} style={{ color: colors.textSubtle, margin: 0, maxWidth: 260 }}>{r.reason}</Paragraph>
       ),
     },
     {
-      title: "Tarih",
+      title: t("date"),
       key: "date",
       render: (_: unknown, r: any) => (
         <Text style={{ color: colors.textMuted, fontSize: 12 }}>
@@ -95,7 +97,7 @@ const RegradeRequests = () => {
       ),
     },
     {
-      title: "İşlem",
+      title: t("actions"),
       key: "actions",
       render: (_: unknown, r: any) => (
         <Space>
@@ -105,7 +107,7 @@ const RegradeRequests = () => {
             onClick={() => navigate(`/teacher/results/${r.examPaperId}`)}
             style={{ color: colors.accent, borderColor: colors.accentBorder }}
           >
-            Detay
+            {t("detail")}
           </Button>
           <Button
             size="small"
@@ -114,7 +116,7 @@ const RegradeRequests = () => {
             onClick={() => openResolve(r, "Approved")}
             style={{ background: "#52c41a", border: "none" }}
           >
-            Onayla
+            {t("approve")}
           </Button>
           <Button
             size="small"
@@ -122,7 +124,7 @@ const RegradeRequests = () => {
             icon={<CloseOutlined />}
             onClick={() => openResolve(r, "Rejected")}
           >
-            Reddet
+            {t("reject")}
           </Button>
         </Space>
       ),
@@ -133,14 +135,14 @@ const RegradeRequests = () => {
     <div>
       <div style={{ marginBottom: 24 }}>
         <Title level={4} style={{ color: colors.textPrimary, margin: 0, fontFamily: "'JetBrains Mono'" }}>
-          İtiraz Talepleri
+          {t("regradeRequests")}
         </Title>
-        <Text style={{ color: colors.textMuted }}>Öğrencilerin not itirazlarını incele ve sonuçlandır</Text>
+        <Text style={{ color: colors.textMuted }}>{t("regradeRequestsSubtitle")}</Text>
       </div>
 
       <Card style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12 }} styles={{ body: { padding: 0 } }}>
         {requests.length === 0 && !loading ? (
-          <Empty description={<Text style={{ color: colors.textMuted }}>Bekleyen itiraz talebi yok</Text>} style={{ padding: 40 }} />
+          <Empty description={<Text style={{ color: colors.textMuted }}>{t("noPendingAppeals")}</Text>} style={{ padding: 40 }} />
         ) : (
           <Table
             dataSource={requests}
@@ -156,7 +158,7 @@ const RegradeRequests = () => {
       <Modal
         title={
           <span style={{ color: colors.textPrimary }}>
-            {resolveModal.decision === "Approved" ? "İtirazı Onayla" : "İtirazı Reddet"}
+            {resolveModal.decision === "Approved" ? t("approveAppeal") : t("rejectAppeal")}
           </span>
         }
         open={resolveModal.open}
@@ -166,14 +168,14 @@ const RegradeRequests = () => {
         {resolveModal.request && (
           <div style={{ padding: "8px 0" }}>
             <div style={{ background: colors.tooltipBg, borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
-              <Text style={{ color: colors.textMuted, fontSize: 12, display: "block" }}>Öğrenci gerekçesi</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, display: "block" }}>{t("studentReason")}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{resolveModal.request.reason}</Text>
             </div>
 
             {resolveModal.decision === "Approved" && (
               <div style={{ marginBottom: 16 }}>
                 <Text style={{ color: colors.textSubtle, display: "block", marginBottom: 6 }}>
-                  Yeni puan <Text style={{ color: colors.textMuted, fontSize: 12 }}>(boş bırakırsan puan değişmez)</Text>
+                  {t("newScore")} <Text style={{ color: colors.textMuted, fontSize: 12 }}>{t("newScoreHint")}</Text>
                 </Text>
                 <InputNumber
                   min={0}
@@ -188,11 +190,11 @@ const RegradeRequests = () => {
 
             <div style={{ marginBottom: 16 }}>
               <Text style={{ color: colors.textSubtle, display: "block", marginBottom: 6 }}>
-                Yanıt notu <Text style={{ color: colors.textMuted, fontSize: 12 }}>(opsiyonel)</Text>
+                {t("responseNote")} <Text style={{ color: colors.textMuted, fontSize: 12 }}>{t("optional")}</Text>
               </Text>
               <Input.TextArea
                 rows={3}
-                placeholder="Öğrenciye iletilecek açıklama..."
+                placeholder={t("responseNotePlaceholder")}
                 value={teacherNote}
                 onChange={(e) => setTeacherNote(e.target.value)}
                 maxLength={300}
@@ -208,7 +210,7 @@ const RegradeRequests = () => {
               danger={resolveModal.decision === "Rejected"}
               style={resolveModal.decision === "Approved" ? { background: "#52c41a", border: "none", fontWeight: 600 } : { fontWeight: 600 }}
             >
-              {resolveModal.decision === "Approved" ? "Onayla" : "Reddet"}
+              {resolveModal.decision === "Approved" ? t("approve") : t("reject")}
             </Button>
           </div>
         )}

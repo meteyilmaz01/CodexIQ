@@ -13,6 +13,7 @@ import {
   MenuUnfoldOutlined,
   MenuOutlined,
   CloseOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useThemeColors } from "../../theme/themeConfig";
@@ -48,6 +49,7 @@ const StudentLayout = () => {
   const menuItems = [
     { key: "/student", icon: <DashboardOutlined />, label: t("dashboard") },
     { key: "/student/results", icon: <FileTextOutlined />, label: t("examResults") },
+    { key: "/student/analytics", icon: <BarChartOutlined />, label: t("analytics") },
     { key: "/student/code-test", icon: <CodeOutlined />, label: t("codeTest") },
     { key: "/student/messages", icon: <MessageOutlined />, label: t("messages") },
     { key: "/student/profile", icon: <UserOutlined />, label: t("profile") },

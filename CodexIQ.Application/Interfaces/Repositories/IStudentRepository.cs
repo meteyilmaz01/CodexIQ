@@ -32,5 +32,8 @@ namespace CodexIQ.Application.Interfaces.Repositories
 
         Task<RegradeRequest?> GetActiveRegradeRequestAsync(Guid studentId, Guid examPaperId);
         Task AddRegradeRequestAsync(RegradeRequest request);
+
+        Task<List<ExamPaper>> GetProgressPapersAsync(Guid studentId);
+        Task<List<FinalEvaluation>> GetAllFinalEvaluationsAsync(Guid studentId);
     }
 }

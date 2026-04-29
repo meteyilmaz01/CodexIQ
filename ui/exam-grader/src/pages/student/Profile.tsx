@@ -51,7 +51,7 @@ const Profile = () => {
     try {
       const res = await studentApi.joinClass(joinCode.trim());
       const data = res.data || res;
-      message.success(`"${data.className}" sınıfına başarıyla katıldınız!`);
+      message.success(`"${data.className}" ${t("joinSuccess")}`);
       setJoinModalOpen(false);
       setJoinCode("");
     } catch (err: any) {
@@ -89,8 +89,8 @@ const Profile = () => {
           >
             <TeamOutlined style={{ fontSize: 22, color: colors.accent }} />
             <div>
-              <Text style={{ color: colors.textSecondary, fontWeight: 600, display: "block" }}>Sınıfa Katıl</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12 }}>Öğretmenin verdiği kodu gir</Text>
+              <Text style={{ color: colors.textSecondary, fontWeight: 600, display: "block" }}>{t("joinClass")}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }}>{t("joinClassSubtitle")}</Text>
             </div>
           </Card>
 
@@ -187,17 +187,17 @@ const Profile = () => {
       </Row>
 
       <Modal
-        title={<span style={{ color: colors.textPrimary }}>Sınıfa Katıl</span>}
+        title={<span style={{ color: colors.textPrimary }}>{t("joinClass")}</span>}
         open={joinModalOpen}
         onCancel={() => { setJoinModalOpen(false); setJoinCode(""); }}
         footer={null}
       >
         <div style={{ padding: "8px 0" }}>
           <Text style={{ color: colors.textMuted, display: "block", marginBottom: 16 }}>
-            Öğretmenin sana verdiği 6 haneli katılım kodunu gir.
+            {t("joinClassInstruction")}
           </Text>
           <Input
-            placeholder="Örn: AB3K9Z"
+            placeholder={t("joinClassPlaceholder")}
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             onPressEnter={handleJoinClass}
@@ -212,7 +212,7 @@ const Profile = () => {
             disabled={joinCode.trim().length < 4}
             style={{ background: "linear-gradient(135deg, #00b8d4, #00e5ff)", border: "none", fontWeight: 600 }}
           >
-            Katıl
+            {t("join")}
           </Button>
         </div>
       </Modal>

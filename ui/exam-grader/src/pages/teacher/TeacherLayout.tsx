@@ -5,6 +5,7 @@ import {
   DashboardOutlined,
   CloudUploadOutlined,
   BarChartOutlined,
+  LineChartOutlined,
   TeamOutlined,
   MessageOutlined,
   UserOutlined,
@@ -59,6 +60,7 @@ const TeacherLayout = () => {
     { key: "/teacher", icon: <DashboardOutlined />, label: t("dashboard") },
     { key: "/teacher/upload", icon: <CloudUploadOutlined />, label: t("uploadExam") },
     { key: "/teacher/results", icon: <BarChartOutlined />, label: t("results") },
+    { key: "/teacher/analytics", icon: <LineChartOutlined />, label: t("classAnalytics") },
     { key: "/teacher/students", icon: <TeamOutlined />, label: t("students") },
     {
       key: "/teacher/regrade-requests",

@@ -308,6 +308,7 @@ public class TeacherService : ITeacherService
         return new TeacherResultDetailDto
         {
             Id = paper.Id,
+            ExamId = paper.ExamId,
             StudentName = paper.Student != null
                 ? $"{paper.Student.FirstName} {paper.Student.LastName}"
                 : "OCR Bekleniyor",
@@ -647,5 +648,23 @@ public class TeacherService : ITeacherService
     public async Task<List<AdminAnnouncementDto>> GetAnnouncementsAsync()
     {
         return await _unitOfWork.Admin.GetAnnouncementsAsync();
+    }
+
+    public async Task<List<TopExamErrorDto>> GetTopExamErrorsAsync(Guid teacherId, Guid examId)
+    {
+        return await _unitOfWork.Teacher.GetTopExamErrorsAsync(examId, teacherId);
+    }
+
+    public async Task<List<ExamSummaryDto>> GetAllExamsAsync(Guid teacherId)
+    {
+        var exams = await _unitOfWork.Teacher.GetAllExamsAsync(teacherId);
+        return exams.Select(e => new ExamSummaryDto
+        {
+            Id         = e.Id,
+            Name       = e.Name,
+            CourseName = e.Course.Name,
+            PaperCount = e.ExamPaper.Count,
+            CreatedDate = e.CreatedDate
+        }).ToList();
     }
 }
