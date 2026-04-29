@@ -12,7 +12,7 @@
 
 **CodexIQ**, el yazısıyla yazılmış programlama sınav kağıtlarını yapay zeka ile otomatik olarak değerlendiren bir eğitim platformudur. Öğretmenler taranmış sınav kağıtlarını yükler, üç farklı büyük dil modeli paralel olarak değerlendirme yapar ve sonuçlar öğrencilerle paylaşılır.
 
-[Özellikler](#-özellikler) · [Mimari](#-mimari) · [API Referansı](#-api-referansı) · [Kurulum](#-kurulum) · [Teknoloji Yığını](#-teknoloji-yığını)
+[Özellikler](#özellikler) · [Mimari](#mimari) · [API Referansı](#api-referansı) · [Kurulum](#kurulum) · [Teknoloji Yığını](#teknoloji-yığını)
 
 </div>
 
