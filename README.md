@@ -22,7 +22,7 @@
 
 Geleneksel sınav değerlendirme süreçleri zaman alıcı ve öğretmenler için yük oluşturmaktadır. CodexIQ bu süreci tamamen otomatize eder:
 
-1. Öğretmen taranmış sınav kağıtlarını platforma yükler
+1. Öğretmen sınav kağıtlarını platforma yükler
 2. Gemini Vision ile el yazısı OCR yapılır, öğrenci bilgisi ve kod çıkarılır
 3. **Gemini**, **Groq Llama** ve **DeepSeek** üç paralel jüri olarak değerlendirme yapar
 4. Bir hakem model (Groq Llama JSON mode) üç jürinin kararını sentezler
@@ -119,13 +119,13 @@ Sınav Kağıdı (PNG/PDF)
         │
         ▼
 ┌───────────────────┐
-│  Gemini Vision    │  ← OCR: El yazısı → Kod metni
-│  (Ön İşleme ile) │     Öğrenci adı + numarası tespiti
+│  Gemini Vision    │  ← OCR:  El yazısı → Kod metni + Öğrenci adı + numarası tespiti
+│  (Ön İşleme ile)  │     
 └────────┬──────────┘
          │
          ▼
 ┌─────────────────────────────────────┐
-│         Paralel Jüri Değerlendirme  │
+│      Paralel Jüri Değerlendirme     │
 ├───────────┬──────────┬──────────────┤
 │  Gemini   │  Groq    │  DeepSeek    │
 │  2.5 Flash│  Llama   │  V3 (free)   │
@@ -301,7 +301,7 @@ Sınav Kağıdı (PNG/PDF)
 | Kategori | Teknoloji |
 |----------|-----------|
 | OCR | Gemini 2.5 Flash Vision |
-| Ensemble | Groq Llama 3.3 70B + DeepSeek V3 |
+| Ensemble | Gemini 2.5 Flash + Groq Llama 3.3 70B + DeepSeek V3 |       
 | Hakem | Groq Llama 3.3 70B (JSON mode) |
 | Görsel Fallback | Groq Llama 4 Scout Vision |
 | Görüntü İşleme | Pillow (grayscale, kontrast, keskinleştirme) |
@@ -466,7 +466,7 @@ FILE_STORAGE_BASE=C:\CodexIQ\Uploads
             │  InsightResultPublished
             ▼
 ┌──────────────────────────┐
-│  insight-result-queue    │
+│   insight-result-queue   │
 └───────────┬──────────────┘
             │
             ▼ (InsightResultConsumer dinler)
