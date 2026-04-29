@@ -119,19 +119,35 @@ const QueueMonitor = () => {
             {workerStats.length === 0 && <Text style={{ color: colors.textMuted }}>{t("noData") || "Veri yok"}</Text>}
           </Card>
           <Card title={<span style={{ color: colors.textPrimary, fontFamily: "'JetBrains Mono'", fontSize: 14 }}>{t("queueInfo")}</span>} style={{ background: colors.cardBg, border: colors.borderPrimary, borderRadius: 12, marginTop: 16 }}>
-            {[
-              { label: "Exchange", value: data?.exchange || "exam_eval_exchange" },
-              { label: "Queue", value: data?.queue || "exam_eval_queue" },
-              { label: "Consumers", value: data?.consumers ?? "-" },
-              { label: "Prefetch", value: data?.prefetch ?? "-" },
-              { label: "Ack Mode", value: data?.ackMode || "-" },
-              { label: t("avgProcessing"), value: data?.avgProcessingTime || "-" },
-            ].map((info, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: i < 5 ? colors.listItemBorder : "none" }}>
-                <Text style={{ color: colors.textMuted, fontSize: 12 }}>{info.label}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: "'JetBrains Mono'" }}>{info.value}</Text>
-              </div>
-            ))}
+            {(data?.queues || data?.Queues || []).length > 0 ? (
+              (data?.queues || data?.Queues || []).map((q: any, i: number, arr: any[]) => (
+                <div key={i} style={{ padding: "8px 0", borderBottom: i < arr.length - 1 ? colors.listItemBorder : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, fontFamily: "'JetBrains Mono'" }}>{q.queueName || q.QueueName}</Text>
+                    <Tag color={q.status === "Active" || q.Status === "Active" ? "success" : "default"} style={{ fontSize: 10, borderRadius: 4 }}>
+                      {q.status || q.Status || "Idle"}
+                    </Tag>
+                  </div>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 11 }}>Ready: <b style={{ color: colors.textSecondary }}>{q.readyCount ?? q.ReadyCount ?? 0}</b></Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 11 }}>Unacked: <b style={{ color: (q.unackedCount ?? q.UnackedCount ?? 0) > 0 ? "#faad14" : colors.textSecondary }}>{q.unackedCount ?? q.UnackedCount ?? 0}</b></Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 11 }}>Total: <b style={{ color: colors.textSecondary }}>{q.totalCount ?? q.TotalCount ?? 0}</b></Text>
+                  </div>
+                </div>
+              ))
+            ) : (
+              [
+                "evaluate-exam-queue",
+                "exam-results-queue",
+                "generate-insight-queue",
+                "insight-result-queue",
+              ].map((name, i, arr) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: i < arr.length - 1 ? colors.listItemBorder : "none" }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: "'JetBrains Mono'" }}>{name}</Text>
+                  <Tag color="default" style={{ fontSize: 10, borderRadius: 4 }}>-</Tag>
+                </div>
+              ))
+            )}
           </Card>
         </Col>
       </Row>
