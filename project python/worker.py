@@ -489,8 +489,12 @@ class EnsembleEvaluator:
            - satir: line number or location
            - hata_turu: "syntax" or "logic"
            - severity: "error" or "warning"
-           - aciklama: clear description
-           - hint: helpful, encouraging hint for the student to fix it
+           - aciklama: For SYNTAX errors — what exactly is wrong (e.g. "letter 'O' used instead of digit '0'").
+                       For LOGIC errors — explain WHY the logic is wrong AND what the correct approach should be
+                       (e.g. "left pointer incremented by 1 without removing the old character from char_set;
+                       a while loop is needed to slide left until the duplicate is removed").
+                       Be specific and educational, not vague.
+           - hint: a short, encouraging tip for the student (1 sentence)
         4. Identify 3-5 areas where the student should improve (gelisim_alanlari). For each:
            - konu: topic name (e.g., "Pointer Kullanımı", "Bellek Yönetimi", "Hata Yakalama")
            - mevcut_seviye: estimated current proficiency 0-100

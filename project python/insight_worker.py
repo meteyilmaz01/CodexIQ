@@ -44,48 +44,54 @@ def build_full_reset_prompt(all_errors: list) -> str:
         if syntax or logic:
             lines.append(f"Sınav {idx}:")
             for e in syntax:
-                lines.append(f"  [Syntax] {e}")
+                lines.append(f"  [Syntax Hatası] {e}")
             for e in logic:
-                lines.append(f"  [Mantık] {e}")
+                lines.append(f"  [Mantık Hatası] {e}")
 
     if not lines:
         return ""
 
     errors_text = "\n".join(lines)
-    return f"""Aşağıda bir programlama öğrencisinin birden fazla sınavdaki hata kayıtları bulunuyor.
-Bu hataları analiz et, ortak örüntüleri ve tekrar eden zayıflıkları bul.
+    return f"""Aşağıda bir programlama öğrencisinin sınavlarındaki hata açıklamaları bulunuyor.
+Her hata açıklaması, daha önce bir AI tarafından üretilmiş — neyin yanlış olduğunu ve neden yanlış olduğunu içeriyor.
 
 {errors_text}
 
-Öğrenciye yönelik, 3 maddelik kısa ve yapıcı bir Türkçe gelişim önerisi yaz.
-Her madde maksimum 2 cümle olsun. Teknik jargon kullanma, doğrudan öğrenciye hitap et.
-Sadece maddeleri yaz, başlık veya açıklama ekleme."""
+Bu hataları analiz et:
+1. Tekrar eden örüntüleri bul (örn. aynı tür syntax hatası birden fazla sınavda, aynı algoritma mantığında hata)
+2. Her önerinin DOĞRUDAN bu öğrencinin yaptığı hatalara dayandığından emin ol
+3. Genel tavsiye verme — "dikkatli ol" gibi ifadeler kullanma
+
+Öğrenciye yönelik, 3 maddelik Türkçe gelişim önerisi yaz.
+Her madde: ne konuda eksik olduğunu somut belirt + nasıl geliştireceğini açıkla (max 2 cümle).
+Doğrudan öğrenciye hitap et (sen). Sadece maddeleri yaz, başlık veya giriş cümlesi ekleme."""
 
 
 def build_delta_prompt(current_insight: str, new_syntax: list, new_logic: list, total_count: int) -> str:
     new_errors = []
     for e in new_syntax:
-        new_errors.append(f"  [Syntax] {e}")
+        new_errors.append(f"  [Syntax Hatası] {e}")
     for e in new_logic:
-        new_errors.append(f"  [Mantık] {e}")
+        new_errors.append(f"  [Mantık Hatası] {e}")
 
     if not new_errors:
         return ""
 
     new_errors_text = "\n".join(new_errors)
-    return f"""Bir programlama öğrencisinin mevcut gelişim özeti aşağıdadır (toplam {total_count - 1} sınav üzerinden):
+    return f"""Bir programlama öğrencisinin mevcut gelişim özeti aşağıdadır ({total_count - 1} sınav üzerinden):
 
 {current_insight}
 
-Öğrenci yeni bir sınav daha verdi ({total_count}. sınav). Yeni hatalar:
+Öğrenci {total_count}. sınavını verdi. Bu sınavdaki yeni hata açıklamaları:
 {new_errors_text}
 
-Bu yeni bilgilerle gelişim özetini güncelle.
-- Eski sorunlar hala devam ediyorsa vurgula
-- Yeni sorun ortaya çıktıysa ekle
-- Çözülen sorun varsa çıkar
+Yeni hatalarla gelişim özetini güncelle:
+- Eski sorunlar devam ediyorsa daha güçlü vurgula
+- Yeni bir sorun ortaya çıktıysa ekle ve somut açıkla
+- Artık sorun yoksa çıkar
+- Genel tavsiyelerden kaçın, doğrudan bu hatalara dayandır
 
-3 maddelik kısa Türkçe, öğrenciye hitap eden format. Sadece maddeleri yaz."""
+3 maddelik Türkçe, öğrenciye hitap eden format (sen). Sadece maddeleri yaz."""
 
 
 # ============================================================
@@ -118,6 +124,8 @@ def generate_insight(prompt: str) -> str:
 def process_message(body: bytes, channel, method):
     try:
         data = json.loads(body)
+        if "message" in data:
+            data = data["message"]
         student_id       = data.get("studentId")
         is_full_reset    = data.get("isFullReset", True)
         total_count      = data.get("totalExamCount", 0)

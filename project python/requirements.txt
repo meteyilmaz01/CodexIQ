@@ -1,6 +1,7 @@
 pika
 google-genai
 openai
-ollama
 Pillow
 pydantic
+python-dotenv
+flask
