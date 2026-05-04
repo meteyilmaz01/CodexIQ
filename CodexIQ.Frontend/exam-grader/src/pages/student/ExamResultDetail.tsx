@@ -72,10 +72,21 @@ const ExamResultDetail = () => {
   const logicErrors = data.mantik_hatalari || data.logicErrors || [];
   const rubricBreakdown: { criteria: string; maxPoints: number; earnedPoints: number }[] = data.rubricBreakdown || [];
   const rawModelScores = data.model_scores || data.modelScores || {};
+  const MODEL_DISPLAY_NAMES: Record<string, string> = {
+    gemini: "Gemini 2.5 Flash",
+    "Gemini 2.5 Flash": "Gemini 2.5 Flash",
+    groq_llama: "Groq Llama 3.3",
+    "Groq Llama 3.3": "Groq Llama 3.3",
+    ollama_llama: "DeepSeek V3",
+    "Ollama Llama 3.1": "DeepSeek V3",
+    deepseek: "DeepSeek V3",
+    "DeepSeek V3": "DeepSeek V3",
+  };
+  const formatModelName = (key: string) => MODEL_DISPLAY_NAMES[key] ?? key;
   // Backend array [{modelName, score}] döndürüyor; eski dict formatını da destekle
   const modelScoresList: { name: string; score: number }[] = Array.isArray(rawModelScores)
-    ? rawModelScores.map((m: any) => ({ name: m.modelName ?? m.name ?? "model", score: Number(m.score) || 0 }))
-    : Object.entries(rawModelScores).map(([name, score]: [string, any]) => ({ name, score: Number(score) || 0 }));
+    ? rawModelScores.map((m: any) => ({ name: formatModelName(m.modelName ?? m.name ?? "model"), score: Number(m.score) || 0 }))
+    : Object.entries(rawModelScores).map(([name, score]: [string, any]) => ({ name: formatModelName(name), score: Number(score) || 0 }));
   const totalScore = data.toplam_puan ?? data.totalScore ?? data.score ?? 0;
   const isOverridden: boolean = data.isOverridden ?? false;
   const originalScore: number | null = data.originalScore ?? null;

@@ -287,9 +287,10 @@ const CodeTest = () => {
                         {result.modelScores && Object.keys(result.modelScores).length > 0 && (
                           <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${colors.dividerColor}` }}>
                             <Text style={{ color: colors.textMuted, fontSize: 11 }}>Jüri skorları: </Text>
-                            {Object.entries(result.modelScores).map(([m, s]: any) => (
-                              <Tag key={m} style={{ fontSize: 11 }}>{m}: {s}</Tag>
-                            ))}
+                            {Object.entries(result.modelScores).map(([m, s]: any) => {
+                              const MODEL_NAMES: Record<string, string> = { gemini: "Gemini 2.5 Flash", "Gemini 2.5 Flash": "Gemini 2.5 Flash", groq_llama: "Groq Llama 3.3", "Groq Llama 3.3": "Groq Llama 3.3", ollama_llama: "DeepSeek V3", "Ollama Llama 3.1": "DeepSeek V3", deepseek: "DeepSeek V3" };
+                              return <Tag key={m} style={{ fontSize: 11 }}>{MODEL_NAMES[m] ?? m}: {s}</Tag>;
+                            })}
                           </div>
                         )}
                       </div>

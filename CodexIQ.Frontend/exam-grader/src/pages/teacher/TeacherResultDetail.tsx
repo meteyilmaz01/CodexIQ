@@ -103,11 +103,22 @@ const TeacherResultDetail = () => {
 
   const syntaxErrors = data.syntax_hatalari || data.syntaxErrors || [];
   const logicErrors = data.mantik_hatalari || data.logicErrors || [];
+  const MODEL_DISPLAY_NAMES: Record<string, string> = {
+    gemini: "Gemini 2.5 Flash",
+    "Gemini 2.5 Flash": "Gemini 2.5 Flash",
+    groq_llama: "Groq Llama 3.3",
+    "Groq Llama 3.3": "Groq Llama 3.3",
+    ollama_llama: "DeepSeek V3",
+    "Ollama Llama 3.1": "DeepSeek V3",
+    deepseek: "DeepSeek V3",
+    "DeepSeek V3": "DeepSeek V3",
+  };
+  const formatModelName = (key: string) => MODEL_DISPLAY_NAMES[key] ?? key;
   // modelScores can arrive as an array [{modelName, score}] or as an object {model: score}
   const rawModelScores = data.model_scores || data.modelScores || [];
   const modelScores: Record<string, number> = Array.isArray(rawModelScores)
-    ? Object.fromEntries(rawModelScores.map((ms: any) => [ms.modelName || ms.model || "model", ms.score ?? ms.Score ?? 0]))
-    : rawModelScores;
+    ? Object.fromEntries(rawModelScores.map((ms: any) => [formatModelName(ms.modelName || ms.model || "model"), ms.score ?? ms.Score ?? 0]))
+    : Object.fromEntries(Object.entries(rawModelScores).map(([k, v]) => [formatModelName(k), v]));
   const code = data.code || "";
   const codePurpose = data.code_purpose || data.codePurpose || "";
 

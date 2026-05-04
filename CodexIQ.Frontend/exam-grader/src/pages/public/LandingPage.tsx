@@ -156,7 +156,7 @@ const copy: Record<
       title: "Sinif hazir, muhendislik odakli",
       sub: "Mevcut rolleriniz ve mevcut backend akisinizle uyumlu bir calisma duzeni.",
       items: [
-        { title: "Coklu AI Ensemble", desc: "Gemini 2.5 Flash, Groq Llama 3.3 ve Ollama Llama 3.1 birlikte karar verir." },
+        { title: "Coklu AI Ensemble", desc: "Gemini 2.5 Flash, Groq Llama 3.3 ve DeepSeek V3 birlikte karar verir." },
         { title: "El Yazisi OCR", desc: "Tarayıcıdan veya telefondan çekilen sınav kağıtlarını okur." },
         { title: "Ogretmen Override", desc: "AI puanını dilediğin gibi düzenle, notunu ekle, son sözü sen söyle." },
         { title: "Mesajlasma", desc: "Öğrenci ve öğretmen arasında platform içi direkt iletişim." },
@@ -228,7 +228,7 @@ const copy: Record<
     },
     terminal: {
       line1: "OCR tamamlandi, 12 sayfa cozuldu, agirlikli puanlama baslatildi",
-      line2: "modeller: gemini, groq, ollama",
+      line2: "modeller: gemini, groq, deepseek",
       final: "nihai",
     },
     cta: {
@@ -291,7 +291,7 @@ const copy: Record<
           keyLabel: "step.evaluate",
           title: "AI ensemble evaluates",
           desc: "OCR, code analysis, and weighted voting run in one flow.",
-          detail: "Gemini, Groq, and Ollama contribute together.",
+          detail: "Gemini, Groq, and DeepSeek contribute together.",
         },
         {
           key: "deliver",
@@ -379,7 +379,7 @@ const copy: Record<
     },
     terminal: {
       line1: "OCR complete, 12 pages parsed, weighted scoring initialized",
-      line2: "models: gemini, groq, ollama",
+      line2: "models: gemini, groq, deepseek",
       final: "final",
     },
     cta: {
@@ -667,7 +667,7 @@ function LandingPage() {
                 {[
                   ["gemini", 100],
                   ["groq", 95],
-                  ["ollama", 98],
+                  ["deepseek", 98],
                 ].map(([name, score]) => (
                   <div key={name} className="landing-judge-row">
                     <span className="landing-judge-name">{name}</span>
@@ -723,9 +723,9 @@ function LandingPage() {
                         <i />
                         Groq Llama 3.3
                       </span>
-                      <span className="landing-ai-chip ollama">
+                      <span className="landing-ai-chip deepseek">
                         <i />
-                        Ollama Llama 3.1
+                        DeepSeek V3
                       </span>
                     </div>
                   ) : null}
@@ -841,7 +841,7 @@ function LandingPage() {
                       {[
                         ["gemini 2.5", 100],
                         ["groq llama", 95],
-                        ["ollama 3.1", 98],
+                        ["deepseek v3", 98],
                       ].map(([name, score]) => (
                         <div key={name} className="landing-judge-row wide">
                           <span className="landing-judge-name">{name}</span>

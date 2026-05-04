@@ -73,7 +73,7 @@ namespace CodexIQ.Infrastructure.Messaging
                 {
                     { "Gemini 2.5 Flash", message.ModelScores.Gemini },
                     { "Groq Llama 3.3",   message.ModelScores.GroqLlama },
-                    { "Ollama Llama 3.1", message.ModelScores.OllamaLlama }
+                    { "DeepSeek V3",      message.ModelScores.OllamaLlama }
                 };
 
                 if (paper.AIModelResults.Any())
@@ -91,7 +91,7 @@ namespace CodexIQ.Infrastructure.Messaging
                         Feedback = $"{modelName}: {score}/100"
                     });
                 }
-                Console.WriteLine($"[CONSUMER] Model skorları kaydedildi: Gemini={message.ModelScores.Gemini}, Groq={message.ModelScores.GroqLlama}, Ollama={message.ModelScores.OllamaLlama}");
+                Console.WriteLine($"[CONSUMER] Model skorları kaydedildi: Gemini={message.ModelScores.Gemini}, Groq={message.ModelScores.GroqLlama}, DeepSeek={message.ModelScores.OllamaLlama}");
             }
 
             var eval = message.Evaluation;
