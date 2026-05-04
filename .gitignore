@@ -374,7 +374,9 @@ appsettings.Development.json
 
 # Graphify outputs
 graphify-out/
+graphify/
 build_graph.py
+.graphify_detect.json
 
 # Claude Code & internal docs
 CLAUDE.md
