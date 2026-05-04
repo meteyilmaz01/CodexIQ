@@ -236,7 +236,7 @@ public class TeacherController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("regrade-requests/{requestId:guid}/resolve")]
+    [HttpPost("regrade-requests/{requestId  :guid}/resolve")]
     public async Task<IActionResult> ResolveRegradeRequest(Guid requestId, [FromBody] ResolveRegradeRequestDto dto)
     {
         await _teacherService.ResolveRegradeRequestAsync(GetUserId(), requestId, dto);
