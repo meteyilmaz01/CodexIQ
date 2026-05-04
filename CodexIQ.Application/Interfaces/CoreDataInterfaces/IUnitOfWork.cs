@@ -9,12 +9,10 @@ namespace CodexIQ.Application.Interfaces.CoreDataInterfaces
     {
         IUserRepository User { get; }
         IStudentRepository Student { get; }
-
         IMessageRepository Message { get; }
-
         ITeacherRepository Teacher { get; }
-
         IAdminRepository Admin { get; }
+        IStudentInsightRepository StudentInsight { get; }
 
         Task<int> SaveChangesAsync();
     }

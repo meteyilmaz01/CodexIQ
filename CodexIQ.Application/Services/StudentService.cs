@@ -16,13 +16,11 @@ namespace CodexIQ.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IFileStorageService _fileStorage;
-        private readonly IStudentInsightRepository _insightRepository;
 
-        public StudentService(IUnitOfWork unitOfWork, IFileStorageService fileStorage, IStudentInsightRepository insightRepository)
+        public StudentService(IUnitOfWork unitOfWork, IFileStorageService fileStorage)
         {
             _unitOfWork = unitOfWork;
             _fileStorage = fileStorage;
-            _insightRepository = insightRepository;
         }
 
         public async Task<List<RecentResultsDto>> GetRecentResultsAsync(Guid studentId)
@@ -373,7 +371,7 @@ namespace CodexIQ.Application.Services
 
         public async Task<StudentInsightDto> GetInsightAsync(Guid studentId)
         {
-            var insight = await _insightRepository.GetByStudentIdAsync(studentId);
+            var insight = await _unitOfWork.StudentInsight.GetByStudentIdAsync(studentId);
 
             if (insight == null || string.IsNullOrWhiteSpace(insight.InsightText))
                 return new StudentInsightDto { IsReady = false };

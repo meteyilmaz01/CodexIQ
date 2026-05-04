@@ -1,47 +1,40 @@
 ﻿using CodexIQ.Application.Interfaces.CoreDataInterfaces;
 using CodexIQ.Application.Interfaces.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using CodexIQ.Infrastructure.Repository;
 
 namespace CodexIQ.Infrastructure.Persistence
 {
     public class UnitOfWork : IUnitOfWork
     {
-
         private readonly CodexIQDbContext _context;
-        public IUserRepository User { get; private set; }
 
-        public IStudentRepository Student { get; private set; }
-        public IMessageRepository Message { get; private set; }
+        private IUserRepository? _user;
+        private IStudentRepository? _student;
+        private IMessageRepository? _message;
+        private ITeacherRepository? _teacher;
+        private IAdminRepository? _admin;
+        private IStudentInsightRepository? _studentInsight;
 
-        public ITeacherRepository Teacher { get; private set; }
+        public IUserRepository User => _user ??= new UserRepository(_context);
+        public IStudentRepository Student => _student ??= new StudentRepository(_context);
+        public IMessageRepository Message => _message ??= new MessageRepository(_context);
+        public ITeacherRepository Teacher => _teacher ??= new TeacherRepository(_context);
+        public IAdminRepository Admin => _admin ??= new AdminRepository(_context);
+        public IStudentInsightRepository StudentInsight => _studentInsight ??= new StudentInsightRepository(_context);
 
-        public IAdminRepository Admin { get; }
-
-        public UnitOfWork(CodexIQDbContext context, 
-            IUserRepository userRepository, 
-            IStudentRepository studentRepository, 
-            IMessageRepository messageRepository, 
-            ITeacherRepository teacherRepository,
-            IAdminRepository adminRepository)
+        public UnitOfWork(CodexIQDbContext context)
         {
             _context = context;
-            User = userRepository;
-            Student = studentRepository;
-            Message = messageRepository;
-            Teacher = teacherRepository;
-            Admin = adminRepository;
-        }
-
-        public void Dispose()
-        {
-            _context.Dispose();
         }
 
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();
+        }
+
+        public void Dispose()
+        {
+            _context.Dispose();
         }
     }
 }
